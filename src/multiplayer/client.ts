@@ -266,7 +266,7 @@ export class MultiplayerClient {
 
           this.guestConn = conn;
 
-          conn.on('open', () => {
+          const onGuestOpen = () => {
             clearTimeout(connectionTimeout);
             isResolved = true;
             this.setConnectionStatus('connected');
@@ -274,7 +274,13 @@ export class MultiplayerClient {
             this.setStatus(`Conectado à sala ${cleanCode}!`);
             this.send({ type: 'join_lobby', name, carId, roomCode: cleanCode });
             resolve();
-          });
+          };
+
+          if (conn.open) {
+            onGuestOpen();
+          } else {
+            conn.on('open', onGuestOpen);
+          }
 
           conn.on('data', (raw) => {
             this.handleServerMessage(raw);
@@ -350,7 +356,7 @@ export class MultiplayerClient {
 
     this.hostPeers.set(peerPlayerId, connectedPeer);
 
-    conn.on('open', () => {
+    const onHostOpen = () => {
       // Envia boas-vindas com ID e código da sala
       conn.send({
         type: 'welcome',
@@ -361,7 +367,13 @@ export class MultiplayerClient {
 
       this.triggerLobbyUpdate();
       this.setStatus(`${peerInfo.name} entrou na sala!`);
-    });
+    };
+
+    if (conn.open) {
+      onHostOpen();
+    } else {
+      conn.on('open', onHostOpen);
+    }
 
     conn.on('data', (raw) => {
       try {
@@ -656,9 +668,7 @@ export class MultiplayerClient {
     for (const [id, peer] of this.hostPeers) {
       if (excludeId && id === excludeId) continue;
       try {
-        if (peer.conn.open) {
-          peer.conn.send(payload);
-        }
+        peer.conn.send(payload);
       } catch (e) {
         console.error(`[Broadcast Error to ${id}]`, e);
       }
