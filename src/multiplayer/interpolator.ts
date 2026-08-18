@@ -90,19 +90,6 @@ export class NetworkStateInterpolator {
       return null;
     }
 
-    // Caso tenhamos apenas 1 snapshot no buffer
-    if (buffer.length === 1) {
-      const snap = buffer[0];
-      return {
-        state: { ...snap.state },
-        lap: snap.lap,
-        progress: snap.progress,
-        nitroActive: snap.nitroActive,
-        steer: snap.steer,
-        isExtrapolated: false,
-      };
-    }
-
     const now = currentRenderTime !== undefined ? currentRenderTime : (typeof performance !== 'undefined' ? performance.now() : Date.now());
     const targetTime = now - this.interpolationDelayMs;
 

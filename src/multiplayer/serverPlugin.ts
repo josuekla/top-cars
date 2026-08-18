@@ -130,9 +130,28 @@ export function topGearMultiplayerPlugin(): Plugin {
                   sourceId: playerId,
                   targetId: msg.targetId,
                   impulse: msg.impulse,
+                  x: msg.x,
+                  y: msg.y,
                 },
                 playerId
               );
+            } else if (msg.type === 'finish_race') {
+              broadcast({
+                type: 'player_finished',
+                playerId,
+                rank: msg.rank || 1,
+                totalTime: msg.totalTime,
+              });
+            } else if (msg.type === 'ping') {
+              if (client.ws.readyState === WebSocket.OPEN) {
+                client.ws.send(
+                  JSON.stringify({
+                    type: 'pong',
+                    clientTime: msg.clientTime,
+                    serverTime: Date.now(),
+                  })
+                );
+              }
             }
           } catch (e) {
             console.error('[Multiplayer Server Error]', e);

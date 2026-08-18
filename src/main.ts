@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { buildTrack, DEFAULT_TRACK_DEFINITION, getTrackDefinition, type Track, type TrackDefinition } from './track';
 import { RaceManager, type RaceMode } from './race';
 import { TimeAttackManager } from './race/timeattack';
@@ -218,19 +217,16 @@ function startNewRace(options: MenuStartOptions): void {
       multiplayerPlayers: mpPlayers,
     });
 
-    options.multiplayerClient.onWorldSyncCallback = (states) => {
-      for (const st of states) {
-        if (st.id === options.multiplayerClient!.playerId) continue;
-        const remoteRacer = raceManager.racers.find((r) => r.id === st.id);
-        if (remoteRacer) {
-          remoteRacer.state.x = THREE.MathUtils.lerp(remoteRacer.state.x, st.state.x, 0.45);
-          remoteRacer.state.y = THREE.MathUtils.lerp(remoteRacer.state.y, st.state.y, 0.45);
-          remoteRacer.state.angle = st.state.angle;
-          remoteRacer.state.speed = st.state.speed;
-          remoteRacer.state.nitroTimer = st.nitroActive ? 1.0 : 0;
-          remoteRacer.state.surface = st.state.surface;
-        }
-      }
+    options.multiplayerClient.onRemoteCollisionCallback = (_sourceId, _targetId, impulse, x, y) => {
+      raceManager.applyRemoteCollision(impulse);
+      soundSystem.playCollision(impulse);
+      const sparkX = x !== undefined ? x : raceManager.player.state.x;
+      const sparkY = y !== undefined ? y : raceManager.player.state.y;
+      particleSystem.emitSparks(sparkX, 0.45, sparkY, Math.min(18, Math.round(impulse * 6)));
+    };
+
+    options.multiplayerClient.onPlayerFinishedCallback = (playerId, rank, totalTime) => {
+      raceManager.registerRemoteFinish(playerId, rank, totalTime);
     };
   } else {
     raceManager = new RaceManager(track, {
@@ -275,7 +271,22 @@ const gameLoop = new GameLoop(
 
     raceManager.update(input, fixedDt);
 
-    // Envio de estado no modo multiplayer LAN
+    // Atualização suave a 60 FPS dos oponentes remotos via Dead Reckoning + LERP
+    if (currentStartOptions.mode === 'multiplayer' && currentStartOptions.multiplayerClient) {
+      for (const racer of raceManager.racers) {
+        if (!racer.isPlayer) {
+          const interp = currentStartOptions.multiplayerClient.getInterpolatedState(racer.id);
+          if (interp) {
+            racer.state = interp.state;
+            racer.lapTracker.currentLap = interp.lap;
+            racer.lapTracker.lapProgress = interp.progress;
+            racer.nitroSystem.timer = interp.nitroActive ? 1.0 : 0;
+          }
+        }
+      }
+    }
+
+    // Envio de estado no modo multiplayer
     if (currentStartOptions.mode === 'multiplayer' && currentStartOptions.multiplayerClient) {
       currentStartOptions.multiplayerClient.sendState(
         raceManager.player.state,
@@ -301,6 +312,19 @@ const gameLoop = new GameLoop(
         raceManager.player.state.y,
         Math.min(18, Math.round(raceManager.lastCollisionImpulse * 5))
       );
+
+      // Notifica oponente remoto da colisão
+      if (currentStartOptions.mode === 'multiplayer' && currentStartOptions.multiplayerClient) {
+        const remoteOpponent = raceManager.racers.find((r) => !r.isPlayer);
+        if (remoteOpponent) {
+          currentStartOptions.multiplayerClient.sendCollision(
+            remoteOpponent.id,
+            raceManager.lastCollisionImpulse,
+            raceManager.player.state.x,
+            raceManager.player.state.y
+          );
+        }
+      }
     }
 
     // Efeito sonoro de Vácuo (Slipstream)
@@ -332,6 +356,14 @@ const gameLoop = new GameLoop(
       pauseMenu.hide();
       pauseMenu.hidePauseButton();
       soundSystem.playCrowdCheer();
+
+      if (currentStartOptions.mode === 'multiplayer' && currentStartOptions.multiplayerClient) {
+        currentStartOptions.multiplayerClient.sendFinish(
+          raceManager.player.finishTime || raceManager.totalTime,
+          raceManager.player.lapTracker.bestLapTime,
+          raceManager.player.finishRank || 1
+        );
+      }
 
       if (raceManager.config.mode === 'timeattack' && raceManager.player.lapTracker.bestLapTime) {
         timeAttackManager.saveLapTime(

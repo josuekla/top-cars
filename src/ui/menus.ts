@@ -16,7 +16,6 @@ export interface MenuStartOptions {
   networkPlayers?: NetworkPlayerInfo[];
 }
 
-
 export type MenuTab = 'main' | 'presentation' | 'credits' | 'multiplayer';
 
 export class MenuSystem {
@@ -50,11 +49,21 @@ export class MenuSystem {
     this.init3DShowcase();
     this.setupMultiplayerListeners();
     window.addEventListener('keydown', this.handleKeyDown);
+
+    // Auto-join via URL se houver parâmetro ?room= ou ?join=
+    this.checkUrlForRoomJoin();
+  }
+
+  private checkUrlForRoomJoin(): void {
+    const roomCode = MultiplayerClient.parseRoomFromUrl();
+    if (roomCode) {
+      setTimeout(() => {
+        this.joinRoomByCode(roomCode);
+      }, 200);
+    }
   }
 
   private setupLayout(): void {
-    const hostUrl = window.location.origin;
-
     this.overlay.innerHTML = `
       <style>
         #retro-menu-overlay {
@@ -297,7 +306,7 @@ export class MenuSystem {
           border: 2px solid #00ffff;
           border-radius: 10px;
           padding: 24px;
-          max-height: 420px;
+          max-height: 440px;
           overflow-y: auto;
           line-height: 1.6;
         }
@@ -341,7 +350,49 @@ export class MenuSystem {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 10px;
         }
+
+        .room-controls-row {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .room-input {
+          flex: 1;
+          background: #0c101c;
+          border: 2px solid #283759;
+          border-radius: 6px;
+          padding: 8px 12px;
+          color: #00ffff;
+          font-family: inherit;
+          font-size: 14px;
+          font-weight: bold;
+          text-transform: uppercase;
+          letter-spacing: 2px;
+          outline: none;
+        }
+
+        .room-input:focus {
+          border-color: #00d2ff;
+          box-shadow: 0 0 8px rgba(0, 210, 255, 0.4);
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 3px 8px;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: bold;
+          text-transform: uppercase;
+        }
+
+        .status-connected { background: #27ae60; color: #fff; }
+        .status-connecting { background: #f39c12; color: #fff; }
+        .status-reconnecting { background: #e67e22; color: #fff; }
+        .status-disconnected { background: #7f8c8d; color: #fff; }
+        .status-failed { background: #c0392b; color: #fff; }
 
         .player-row {
           display: flex;
@@ -419,7 +470,7 @@ export class MenuSystem {
                 <div class="tab-group" id="group-mode">
                   <button class="tab-btn active" data-mode="race">🏆 Corrida vs IA</button>
                   <button class="tab-btn" data-mode="timeattack">⏱️ Time Attack</button>
-                  <button class="tab-btn" data-mode="multiplayer" style="border-color: #00ffff; color: #00ffff;">🌐 LAN 2P</button>
+                  <button class="tab-btn" data-mode="multiplayer" style="border-color: #00ffff; color: #00ffff;">🌐 Online / P2P</button>
                 </div>
               </div>
 
@@ -478,24 +529,44 @@ export class MenuSystem {
         </div>
       </div>
 
-      <!-- PAINEL MULTIPLAYER LAN -->
+      <!-- PAINEL MULTIPLAYER (WebRTC P2P & Relay) -->
       <div id="tab-content-multiplayer" class="menu-card" style="display: none;">
         <div class="sub-screen-card">
-          <div class="sub-screen-title">🌐 Multiplayer Local (LAN / 2 Jogadores)</div>
-          
-          <div class="lan-box">
-            <div>
-              <div style="font-size: 10px; color: #8fa0c0; text-transform: uppercase;">Acesso para seu amigo na rede local:</div>
-              <div id="mp-url-display" style="font-size: 14px; font-weight: bold; color: #00ffff;">${hostUrl}</div>
-            </div>
-            <button id="btn-copy-url" class="tab-btn" style="flex: 0 0 100px;">📋 Copiar</button>
+          <div class="sub-screen-title">🌐 Multiplayer Online P2P (WebRTC & Relay)</div>
+
+          <!-- Status de Conexão -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 11px;">
+            <div>Status da Rede: <span id="mp-status-badge" class="status-badge status-disconnected">Desconectado</span></div>
+            <div id="mp-status-text" style="color: #8fa0c0; font-size: 11px;">Aguardando ação...</div>
           </div>
 
-          <div class="menu-label">Jogadores Conectados na Sala:</div>
+          <!-- Ações de Sala (Criar / Entrar) -->
+          <div class="room-controls-row">
+            <button id="btn-create-p2p" class="tab-btn" style="flex: 1; padding: 10px; background: #27ae60; color: #fff;">
+              ✨ Criar Sala (Host)
+            </button>
+            <input type="text" id="input-room-code" class="room-input" placeholder="CÓDIGO DA SALA" maxlength="8" />
+            <button id="btn-join-p2p" class="tab-btn" style="flex: 0 0 130px; padding: 10px; background: #2980b9; color: #fff;">
+              🚀 Entrar
+            </button>
+          </div>
+
+          <!-- Link de Convite Compartilhável -->
+          <div class="lan-box" id="box-invite-url">
+            <div style="flex: 1; overflow: hidden;">
+              <div style="font-size: 10px; color: #8fa0c0; text-transform: uppercase;">Link de Convite Direto para Amigos:</div>
+              <div id="mp-url-display" style="font-size: 12px; font-weight: bold; color: #00ffff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                Crie ou entre em uma sala para gerar o link
+              </div>
+            </div>
+            <button id="btn-copy-url" class="tab-btn" style="flex: 0 0 110px; padding: 8px;">📋 Copiar Link</button>
+          </div>
+
+          <div class="menu-label">Pilotos Conectados na Sala:</div>
           <div id="mp-players-list">
             <div class="player-row">
-              <span>🟢 Você (Host)</span>
-              <span style="color: #f1c40f;">AGUARDANDO...</span>
+              <span>🟢 Você</span>
+              <span style="color: #f1c40f;">AGUARDANDO SALA...</span>
             </div>
           </div>
 
@@ -542,7 +613,7 @@ export class MenuSystem {
           <div style="font-size: 12px; color: #ced6e0; line-height: 1.8;">
             <p><b>Desenvolvimento & Física Web Arcade</b><br/>Equipe Top Gear Legado</p>
             <p><b>Design 3D & Efeitos Procedurais</b><br/>Three.js + Shaders Retrô</p>
-            <p><b>Multiplayer em Tempo Real</b><br/>WebSocket Low Latency Engine</p>
+            <p><b>Multiplayer em Tempo Real</b><br/>WebRTC P2P + WebSocket Low Latency Engine</p>
             <p><b>Homenagem Especial</b><br/>A todos os fãs de jogos de corrida 16-bit dos anos 90</p>
           </div>
 
@@ -557,16 +628,39 @@ export class MenuSystem {
   }
 
   private setupMultiplayerListeners(): void {
-    this.mpClient.onLobbyUpdateCallback = (players, canStart) => {
-      this.networkPlayers = players;
-      this.renderMultiplayerLobby(players, canStart);
+    this.mpClient.onStatusChangeCallback = (msg, isError) => {
+      const textEl = this.overlay.querySelector<HTMLDivElement>('#mp-status-text');
+      if (textEl) {
+        textEl.textContent = msg;
+        textEl.style.color = isError ? '#e74c3c' : '#00ffff';
+      }
     };
 
-    this.mpClient.onRaceStartCallback = (players, _totalLaps) => {
+    this.mpClient.onConnectionStatusChangeCallback = (status) => {
+      const badgeEl = this.overlay.querySelector<HTMLSpanElement>('#mp-status-badge');
+      if (badgeEl) {
+        badgeEl.className = `status-badge status-${status}`;
+        const labels: Record<string, string> = {
+          connected: '🟢 Conectado',
+          connecting: '🟡 Conectando...',
+          reconnecting: '🟠 Reconectando...',
+          disconnected: '⚪ Desconectado',
+          failed: '🔴 Erro de Rede',
+        };
+        badgeEl.textContent = labels[status] || status;
+      }
+    };
+
+    this.mpClient.onLobbyUpdateCallback = (players, canStart, roomCode) => {
+      this.networkPlayers = players;
+      this.renderMultiplayerLobby(players, canStart, roomCode);
+    };
+
+    this.mpClient.onRaceStartCallback = (players, _totalLaps, trackId) => {
       soundSystem.playBeep(880);
       this.hide();
       if (this.onStartCallback) {
-        const track = ALL_TRACKS[this.selectedTrackIndex] || ALL_TRACKS[0];
+        const track = ALL_TRACKS.find((t) => t.id === trackId) || ALL_TRACKS[this.selectedTrackIndex] || ALL_TRACKS[0];
         this.onStartCallback({
           mode: 'multiplayer',
           carId: ALL_CARS[this.selectedCarIndex].id,
@@ -580,9 +674,37 @@ export class MenuSystem {
     };
   }
 
-  private renderMultiplayerLobby(players: NetworkPlayerInfo[], canStart: boolean): void {
+  public joinRoomByCode(roomCode: string): void {
+    this.setTab('multiplayer');
+    const input = this.overlay.querySelector<HTMLInputElement>('#input-room-code');
+    if (input) {
+      input.value = roomCode.toUpperCase();
+    }
+    const car = ALL_CARS[this.selectedCarIndex];
+    this.mpClient.joinP2PRoom(roomCode, 'Piloto Desafiante', car.id).catch(() => {
+      // Se falhar WebRTC P2P (ex: ambiente restrito), tenta WebSocket Relay
+      this.mpClient.connect().then(() => {
+        this.mpClient.joinLobby('Piloto Desafiante', car.id);
+      }).catch(console.error);
+    });
+  }
+
+  private renderMultiplayerLobby(players: NetworkPlayerInfo[], canStart: boolean, roomCode?: string): void {
     const listEl = this.overlay.querySelector<HTMLDivElement>('#mp-players-list');
     const startBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-start');
+    const urlDisplay = this.overlay.querySelector<HTMLDivElement>('#mp-url-display');
+    const inputRoom = this.overlay.querySelector<HTMLInputElement>('#input-room-code');
+
+    const effectiveRoomCode = roomCode || this.mpClient.roomCode;
+    if (effectiveRoomCode) {
+      const inviteUrl = this.mpClient.getInviteUrl() || `${window.location.origin}/?join=${effectiveRoomCode}`;
+      if (urlDisplay) {
+        urlDisplay.textContent = inviteUrl;
+      }
+      if (inputRoom && !inputRoom.value) {
+        inputRoom.value = effectiveRoomCode;
+      }
+    }
 
     if (listEl) {
       listEl.innerHTML = players
@@ -612,7 +734,7 @@ export class MenuSystem {
     }
   }
 
-  private setTab(tab: MenuTab): void {
+  public setTab(tab: MenuTab): void {
     this.currentTab = tab;
     soundSystem.playBeep(520);
 
@@ -625,13 +747,6 @@ export class MenuSystem {
     if (presEl) presEl.style.display = tab === 'presentation' ? 'block' : 'none';
     if (credEl) credEl.style.display = tab === 'credits' ? 'block' : 'none';
     if (mpEl) mpEl.style.display = tab === 'multiplayer' ? 'block' : 'none';
-
-    if (tab === 'multiplayer') {
-      this.mpClient.connect().then(() => {
-        const car = ALL_CARS[this.selectedCarIndex];
-        this.mpClient.joinLobby('Piloto', car.id);
-      }).catch(console.error);
-    }
   }
 
   private bindEvents(): void {
@@ -712,14 +827,41 @@ export class MenuSystem {
       startBtn.onclick = () => this.startGame();
     }
 
-    // Botões Multiplayer
+    // Botões Multiplayer P2P
+    const btnCreateP2P = this.overlay.querySelector<HTMLButtonElement>('#btn-create-p2p');
+    if (btnCreateP2P) {
+      btnCreateP2P.onclick = () => {
+        const car = ALL_CARS[this.selectedCarIndex];
+        this.mpClient.createP2PRoom('Piloto 1 (Host)', car.id).catch(() => {
+          // Fallback para WebSocket se WebRTC não puder abrir sala
+          this.mpClient.connect().then(() => {
+            this.mpClient.joinLobby('Piloto 1 (Host)', car.id);
+          }).catch(console.error);
+        });
+      };
+    }
+
+    const btnJoinP2P = this.overlay.querySelector<HTMLButtonElement>('#btn-join-p2p');
+    const inputRoom = this.overlay.querySelector<HTMLInputElement>('#input-room-code');
+    if (btnJoinP2P && inputRoom) {
+      btnJoinP2P.onclick = () => {
+        const code = inputRoom.value.trim().toUpperCase();
+        if (!code) {
+          alert('Por favor, digite o código da sala gerado pelo seu amigo.');
+          return;
+        }
+        this.joinRoomByCode(code);
+      };
+    }
+
     const btnCopy = this.overlay.querySelector<HTMLButtonElement>('#btn-copy-url');
     if (btnCopy) {
       btnCopy.onclick = () => {
-        navigator.clipboard.writeText(window.location.origin);
+        const inviteUrl = this.mpClient.getInviteUrl() || window.location.href;
+        navigator.clipboard.writeText(inviteUrl);
         btnCopy.textContent = '✅ Copiado!';
         setTimeout(() => {
-          btnCopy.textContent = '📋 Copiar';
+          btnCopy.textContent = '📋 Copiar Link';
         }, 2000);
       };
     }
@@ -738,7 +880,8 @@ export class MenuSystem {
     const btnMpStart = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-start');
     if (btnMpStart) {
       btnMpStart.onclick = () => {
-        this.mpClient.startRace();
+        const track = ALL_TRACKS[this.selectedTrackIndex] || ALL_TRACKS[0];
+        this.mpClient.startRace(track.id);
       };
     }
 
@@ -753,7 +896,10 @@ export class MenuSystem {
     if (btnCred) btnCred.onclick = () => this.setTab('credits');
     if (btnBackPres) btnBackPres.onclick = () => this.setTab('main');
     if (btnBackCred) btnBackCred.onclick = () => this.setTab('main');
-    if (btnBackMp) btnBackMp.onclick = () => this.setTab('main');
+    if (btnBackMp) btnBackMp.onclick = () => {
+      this.mpClient.disconnect();
+      this.setTab('main');
+    };
   }
 
   private updateTrackDisplay(): void {
