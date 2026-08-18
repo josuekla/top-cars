@@ -9,8 +9,148 @@ export interface CarMeshInstance {
   rearLeftWheel: THREE.Group;
   rearRightWheel: THREE.Group;
   nitroFlames: THREE.Mesh[];
+  spotLight?: THREE.SpotLight;
+  headlightBeam?: THREE.Mesh;
   stats: CarStats;
   isMotorcycle?: boolean;
+}
+
+let cachedBeamTexture: THREE.CanvasTexture | null = null;
+function getHeadlightBeamTexture(): THREE.CanvasTexture | undefined {
+  if (typeof document === 'undefined') return undefined;
+  if (cachedBeamTexture) return cachedBeamTexture;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return undefined;
+
+  const grad = ctx.createLinearGradient(0, 256, 0, 0);
+  grad.addColorStop(0.0, 'rgba(255, 255, 235, 0.85)');
+  grad.addColorStop(0.18, 'rgba(255, 250, 205, 0.65)');
+  grad.addColorStop(0.55, 'rgba(255, 240, 180, 0.25)');
+  grad.addColorStop(1.0, 'rgba(255, 240, 180, 0.0)');
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 256);
+
+  cachedBeamTexture = new THREE.CanvasTexture(canvas);
+  cachedBeamTexture.wrapS = THREE.ClampToEdgeWrapping;
+  cachedBeamTexture.wrapT = THREE.ClampToEdgeWrapping;
+  return cachedBeamTexture;
+}
+
+let cachedCyanBeamTexture: THREE.CanvasTexture | null = null;
+function getCyanHeadlightBeamTexture(): THREE.CanvasTexture | undefined {
+  if (typeof document === 'undefined') return undefined;
+  if (cachedCyanBeamTexture) return cachedCyanBeamTexture;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return undefined;
+
+  const grad = ctx.createLinearGradient(0, 256, 0, 0);
+  grad.addColorStop(0.0, 'rgba(130, 245, 255, 0.85)');
+  grad.addColorStop(0.18, 'rgba(80, 220, 255, 0.65)');
+  grad.addColorStop(0.55, 'rgba(0, 200, 255, 0.25)');
+  grad.addColorStop(1.0, 'rgba(0, 180, 255, 0.0)');
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 256);
+
+  cachedCyanBeamTexture = new THREE.CanvasTexture(canvas);
+  cachedCyanBeamTexture.wrapS = THREE.ClampToEdgeWrapping;
+  cachedCyanBeamTexture.wrapT = THREE.ClampToEdgeWrapping;
+  return cachedCyanBeamTexture;
+}
+
+function createHeadlightGroundBeam(isMotorcycle: boolean = false): THREE.Mesh {
+  const geo = new THREE.BufferGeometry();
+  const nearZ = isMotorcycle ? 1.4 : 2.16;
+  const farZ = isMotorcycle ? 26.0 : 32.0;
+  const nearW = isMotorcycle ? 0.8 : 2.0;
+  const farW = isMotorcycle ? 6.8 : 10.5;
+  const y = 0.058;
+
+  const positions = [
+    -nearW / 2, y, nearZ,
+    nearW / 2, y, nearZ,
+    -farW / 2, y, farZ,
+    farW / 2, y, farZ,
+  ];
+
+  const uvs = [
+    0, 0,
+    1, 0,
+    0, 1,
+    1, 1,
+  ];
+
+  const indices = [
+    0, 1, 2,
+    1, 3, 2,
+  ];
+
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+
+  const beamTex = isMotorcycle ? getCyanHeadlightBeamTexture() : getHeadlightBeamTexture();
+  const mat = new THREE.MeshBasicMaterial({
+    map: beamTex,
+    color: isMotorcycle ? 0x80ffff : 0xfffae6,
+    transparent: true,
+    opacity: 0.72,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  return mesh;
+}
+
+function createVolumetricBeam(
+  startX: number,
+  startY: number,
+  startZ: number,
+  length: number = 22,
+  color: number = 0xfffae6
+): THREE.Mesh {
+  const coneGeo = new THREE.CylinderGeometry(0.12, 1.8, length, 12, 1, true);
+  coneGeo.rotateX(Math.PI / 2);
+  coneGeo.translate(0, 0, length / 2);
+
+  const mat = new THREE.MeshBasicMaterial({
+    color: color,
+    transparent: true,
+    opacity: 0.12,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  const mesh = new THREE.Mesh(coneGeo, mat);
+  mesh.position.set(startX, startY, startZ);
+  mesh.rotation.x = 0.02; // Leve inclinação para baixo em direção à estrada
+  return mesh;
+}
+
+function createHeadlightLensGlow(x: number, y: number, z: number, color: number = 0xffffff): THREE.Mesh {
+  const geo = new THREE.PlaneGeometry(0.55, 0.4);
+  const mat = new THREE.MeshBasicMaterial({
+    color: color,
+    transparent: true,
+    opacity: 0.85,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const glow = new THREE.Mesh(geo, mat);
+  glow.position.set(x, y, z + 0.02);
+  return glow;
 }
 
 export function createCarMesh(stats: CarStats): CarMeshInstance {
@@ -38,7 +178,7 @@ export function createCarMesh(stats: CarStats): CarMeshInstance {
     roughness: 0.7,
   });
 
-  const lightFrontMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
+  const lightFrontMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
   const lightRearMat = new THREE.MeshBasicMaterial({ color: 0xff2222 });
 
   // 1. Chassi Inferior do Carro
@@ -78,6 +218,9 @@ export function createCarMesh(stats: CarStats): CarMeshInstance {
   const rightHeadLight = new THREE.Mesh(headLightGeo, lightFrontMat);
   rightHeadLight.position.set(0.7, 0.45, 2.16);
 
+  const leftFlare = createHeadlightLensGlow(-0.7, 0.45, 2.16, 0xffffff);
+  const rightFlare = createHeadlightLensGlow(0.7, 0.45, 2.16, 0xffffff);
+
   const tailLightGeo = new THREE.BoxGeometry(0.4, 0.1, 0.1);
   const leftTailLight = new THREE.Mesh(tailLightGeo, lightRearMat);
   leftTailLight.position.set(-0.65, 0.5, -2.16);
@@ -85,7 +228,23 @@ export function createCarMesh(stats: CarStats): CarMeshInstance {
   const rightTailLight = new THREE.Mesh(tailLightGeo, lightRearMat);
   rightTailLight.position.set(0.65, 0.5, -2.16);
 
-  root.add(leftHeadLight, rightHeadLight, leftTailLight, rightTailLight);
+  root.add(leftHeadLight, rightHeadLight, leftFlare, rightFlare, leftTailLight, rightTailLight);
+
+  // Faróis Ativos (SpotLight 3D real + Feixe Luminoso de Asfalto + Cone Volumétrico)
+  const spotLight = new THREE.SpotLight(0xfffae6, 11.0, 45, Math.PI / 5, 0.6, 1.2);
+  spotLight.position.set(0, 0.6, 2.15);
+  const spotTarget = new THREE.Object3D();
+  spotTarget.position.set(0, 0.05, 24.0);
+  root.add(spotTarget);
+  spotLight.target = spotTarget;
+  root.add(spotLight);
+
+  const groundBeam = createHeadlightGroundBeam(false);
+  root.add(groundBeam);
+
+  const volBeamL = createVolumetricBeam(-0.7, 0.45, 2.16, 20, 0xfffae6);
+  const volBeamR = createVolumetricBeam(0.7, 0.45, 2.16, 20, 0xfffae6);
+  root.add(volBeamL, volBeamR);
 
   // 2. Rodas
   const createWheel = () => {
@@ -147,6 +306,8 @@ export function createCarMesh(stats: CarStats): CarMeshInstance {
     rearLeftWheel,
     rearRightWheel,
     nitroFlames: [nitroLeft, nitroRight],
+    spotLight,
+    headlightBeam: groundBeam,
     stats,
     isMotorcycle: false,
   };
@@ -200,10 +361,27 @@ function createMotorcycleMesh(stats: CarStats): CarMeshInstance {
   const headLight = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, 0.1), lightFrontMat);
   headLight.position.set(0, 0.65, 1.45);
 
+  const frontFlare = createHeadlightLensGlow(0, 0.65, 1.45, 0x00ffff);
+
   const tailLight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.1), lightRearMat);
   tailLight.position.set(0, 0.7, -1.35);
 
-  root.add(headLight, tailLight);
+  root.add(headLight, frontFlare, tailLight);
+
+  // Faróis Ativos da Moto (SpotLight Cyberpunk + Feixe no Asfalto)
+  const spotLight = new THREE.SpotLight(0x80ffff, 9.5, 42, Math.PI / 5.2, 0.6, 1.2);
+  spotLight.position.set(0, 0.68, 1.45);
+  const spotTarget = new THREE.Object3D();
+  spotTarget.position.set(0, 0.05, 22.0);
+  root.add(spotTarget);
+  spotLight.target = spotTarget;
+  root.add(spotLight);
+
+  const groundBeam = createHeadlightGroundBeam(true);
+  root.add(groundBeam);
+
+  const volBeam = createVolumetricBeam(0, 0.65, 1.45, 20, 0x00ffff);
+  root.add(volBeam);
 
   // 2. Rodas Inline (Dianteira e Traseira)
   const createBikeWheel = () => {
@@ -247,6 +425,8 @@ function createMotorcycleMesh(stats: CarStats): CarMeshInstance {
     rearLeftWheel: rearWheel,
     rearRightWheel: rearWheel,
     nitroFlames: [nitro],
+    spotLight,
+    headlightBeam: groundBeam,
     stats,
     isMotorcycle: true,
   };

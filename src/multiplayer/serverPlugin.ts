@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite';
 import { WebSocketServer, WebSocket } from 'ws';
-import type { ClientMessage, NetworkPlayerInfo, NetworkPlayerState, ServerMessage } from './protocol';
+import type { ClientMessage, NetworkPlayerInfo, NetworkPlayerState, ServerMessage } from './protocol.ts';
 
 interface ConnectedClient {
   ws: WebSocket;

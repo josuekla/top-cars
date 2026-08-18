@@ -132,6 +132,11 @@ export function createTrackMesh(track: Track): THREE.Group {
   // 4. Grid de Largada / Linha de Chegada
   createStartFinishLine(group, points[0]);
   createStartFinishArch(group, points[0]);
+
+  // 5. Postes de Luz Neon e Iluminação Urbana Retrô Arcade 90s
+  createNeonStreetLamps(group, track);
+
+  // 6. Elementos Decorativos da Pista (Palmeiras, Cactos, Outdoors Neon)
   createTracksideProps(group, track);
 
   return group;
@@ -314,4 +319,175 @@ function createCactus(mat: THREE.Material): THREE.Group {
 
   cactus.add(trunk, armL, armR);
   return cactus;
+}
+
+let cachedHaloTexture: THREE.CanvasTexture | null = null;
+function getLampHaloTexture(): THREE.CanvasTexture | undefined {
+  if (typeof document === 'undefined') return undefined;
+  if (cachedHaloTexture) return cachedHaloTexture;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return undefined;
+
+  const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+  grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.7)');
+  grad.addColorStop(0.65, 'rgba(255, 255, 255, 0.18)');
+  grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+
+  cachedHaloTexture = new THREE.CanvasTexture(canvas);
+  return cachedHaloTexture;
+}
+
+let cachedGroundPoolTexture: THREE.CanvasTexture | null = null;
+function getGroundPoolTexture(): THREE.CanvasTexture | undefined {
+  if (typeof document === 'undefined') return undefined;
+  if (cachedGroundPoolTexture) return cachedGroundPoolTexture;
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return undefined;
+
+  const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.95)');
+  grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.6)');
+  grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.15)');
+  grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 128, 128);
+
+  cachedGroundPoolTexture = new THREE.CanvasTexture(canvas);
+  return cachedGroundPoolTexture;
+}
+
+function createNeonStreetLamps(parent: THREE.Group, track: Track): void {
+  const points = track.points;
+  const count = points.length;
+  if (count < 4) return;
+
+  const poleMat = new THREE.MeshStandardMaterial({
+    color: 0x1a2130,
+    metalness: 0.85,
+    roughness: 0.3,
+  });
+
+  const neonColors = [
+    0x00f3ff, // Cyberpunk Cyan
+    0xffaa22, // Amber Halogen
+    0xff007f, // Neon Magenta
+    0xffea00, // Electric Gold
+    0x00ffaa, // Neon Mint
+    0xf0f8ff, // Xenon White
+  ];
+
+  const haloTex = getLampHaloTexture();
+  const poolTex = getGroundPoolTexture();
+
+  // Distribui postes de luz a cada ~14 pontos da pista (~28 metros de intervalo)
+  const step = 14;
+  let lightIndex = 0;
+
+  for (let i = 0; i < count; i += step) {
+    const pt = points[i];
+    const sideSign = (i / step) % 2 === 0 ? 1 : -1;
+    const kerbDist = 2.8;
+    const halfW = pt.width / 2 + kerbDist;
+
+    // Posição da base do poste (fora da zebra)
+    const postX = pt.x + pt.normalX * (halfW * sideSign);
+    const postZ = pt.y + pt.normalY * (halfW * sideSign);
+
+    const lampGroup = new THREE.Group();
+    lampGroup.position.set(postX, 0, postZ);
+
+    // 1. Base e Mastro Vertical do Poste
+    const baseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.6, 8), poleMat);
+    baseMesh.position.y = 0.3;
+    lampGroup.add(baseMesh);
+
+    const mastMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 8.2, 8), poleMat);
+    mastMesh.position.y = 4.4;
+    lampGroup.add(mastMesh);
+
+    // 2. Braço Curvado em Direção à Pista (Overhang Arm)
+    const armLength = 3.6;
+    const armGeo = new THREE.BoxGeometry(0.14, 0.14, armLength);
+    const armMesh = new THREE.Mesh(armGeo, poleMat);
+    armMesh.position.set(
+      -pt.normalX * (armLength / 2) * sideSign,
+      8.3,
+      -pt.normalY * (armLength / 2) * sideSign
+    );
+    armMesh.rotation.y = -pt.angle + (sideSign > 0 ? Math.PI / 2 : -Math.PI / 2);
+    lampGroup.add(armMesh);
+
+    // Posição da luminária na ponta do braço
+    const headLocalX = -pt.normalX * armLength * sideSign;
+    const headLocalZ = -pt.normalY * armLength * sideSign;
+    const headY = 8.25;
+
+    // 3. Cabeçote da Luminária
+    const headGeo = new THREE.BoxGeometry(0.7, 0.22, 1.2);
+    const headMesh = new THREE.Mesh(headGeo, poleMat);
+    headMesh.position.set(headLocalX, headY, headLocalZ);
+    headMesh.rotation.y = -pt.angle;
+    lampGroup.add(headMesh);
+
+    // 4. Lente Emissiva Neon Brilhante
+    const colorHex = neonColors[lightIndex % neonColors.length];
+    const neonMat = new THREE.MeshBasicMaterial({ color: colorHex });
+
+    const lensGeo = new THREE.BoxGeometry(0.55, 0.08, 1.05);
+    const lensMesh = new THREE.Mesh(lensGeo, neonMat);
+    lensMesh.position.set(headLocalX, headY - 0.12, headLocalZ);
+    lensMesh.rotation.y = -pt.angle;
+    lampGroup.add(lensMesh);
+
+    // 5. Halo Brilhante / Bloom Disk ao redor da luminária
+    const haloMat = new THREE.MeshBasicMaterial({
+      map: haloTex,
+      color: colorHex,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const haloMesh = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), haloMat);
+    haloMesh.position.set(headLocalX, headY - 0.16, headLocalZ);
+    haloMesh.rotation.x = Math.PI / 2;
+    lampGroup.add(haloMesh);
+
+    // 6. Poça de Luz Projetada no Asfalto / Zebra (Ground Pool)
+    const groundPoolMat = new THREE.MeshBasicMaterial({
+      map: poolTex,
+      color: colorHex,
+      transparent: true,
+      opacity: 0.38,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const groundPool = new THREE.Mesh(new THREE.CircleGeometry(5.5, 16), groundPoolMat);
+    groundPool.position.set(headLocalX, 0.062, headLocalZ);
+    groundPool.rotation.x = -Math.PI / 2;
+    lampGroup.add(groundPool);
+
+    // 7. PointLight dinâmico em postes selecionados (iluminação real 3D da pista e carros)
+    if (lightIndex % 2 === 0 && lightIndex < 24) {
+      const pointLight = new THREE.PointLight(colorHex, 4.2, 28, 1.4);
+      pointLight.position.set(headLocalX, headY - 0.5, headLocalZ);
+      lampGroup.add(pointLight);
+    }
+
+    parent.add(lampGroup);
+    lightIndex++;
+  }
 }

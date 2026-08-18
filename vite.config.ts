@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { topGearMultiplayerPlugin } from "./src/multiplayer/serverPlugin";
+import { topGearMultiplayerPlugin } from "./src/multiplayer/serverPlugin.ts";
 
 export default defineConfig({
   plugins: [topGearMultiplayerPlugin()],

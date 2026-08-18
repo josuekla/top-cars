@@ -146,13 +146,6 @@ export class AuthGate {
           animation: shake 0.4s ease;
         }
 
-        .auth-hint {
-          font-size: 11px;
-          color: #7f8c8d;
-          margin-top: 16px;
-          line-height: 1.4;
-        }
-
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           25% { transform: translateX(-8px); }
@@ -187,11 +180,6 @@ export class AuthGate {
 
         <div id="auth-error-msg" class="auth-error">
           ❌ SENHA INCORRETA! TENTE NOVAMENTE.
-        </div>
-
-        <div class="auth-hint">
-          🔑 Dica: A senha padrão inicial é <b>topgear</b> (ou <b>topgear2026</b>).<br/>
-          Após desbloquear, o acesso fica salvo no seu navegador.
         </div>
       </div>
     `;

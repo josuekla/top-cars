@@ -6,6 +6,8 @@ export interface SceneContext {
   renderer: THREE.WebGLRenderer;
   ambientLight: THREE.AmbientLight;
   sunLight: THREE.DirectionalLight;
+  hemiLight: THREE.HemisphereLight;
+  fillLight: THREE.DirectionalLight;
   groundMesh: THREE.Mesh;
 }
 
@@ -16,7 +18,7 @@ export function createScene(container: HTMLElement): SceneContext {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.25;
 
   container.innerHTML = '';
   container.appendChild(renderer.domElement);
@@ -26,14 +28,21 @@ export function createScene(container: HTMLElement): SceneContext {
   // Céu Pôr do Sol de Las Vegas / Deserto dos EUA (Púrpura / Laranja retrô)
   const skyColor = new THREE.Color(0x2a1435);
   scene.background = skyColor;
-  scene.fog = new THREE.FogExp2(0x2a1435, 0.003);
 
-  const ambientLight = new THREE.AmbientLight(0xffeedd, 0.9);
+  // Fog suave com densidade equilibrada (0.0016) para não ofuscar o asfalto próximo
+  scene.fog = new THREE.FogExp2(0x2a1435, 0.0016);
+
+  // 1. Iluminação Ambiente Vibrante e Clara (leve tom dourado/azulado)
+  const ambientLight = new THREE.AmbientLight(0xffeedd, 1.15);
   scene.add(ambientLight);
 
-  // Luz solar dourada do entardecer
+  // 2. Hemisphere Light para iluminação natural e contraste céu vs solo
+  const hemiLight = new THREE.HemisphereLight(0xb8d0ff, 0x664433, 0.9);
+  scene.add(hemiLight);
+
+  // 3. Luz solar direcional principal (ilumina asfalto, zebras e montanhas com nitidez)
   const sunLight = new THREE.DirectionalLight(0xffa550, 1.8);
-  sunLight.position.set(120, 140, 100);
+  sunLight.position.set(120, 160, 100);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.width = 2048;
   sunLight.shadow.mapSize.height = 2048;
@@ -45,6 +54,11 @@ export function createScene(container: HTMLElement): SceneContext {
   sunLight.shadow.camera.top = d;
   sunLight.shadow.camera.bottom = -d;
   scene.add(sunLight);
+
+  // 4. Luz direcional de preenchimento suave oposta para evitar zonas escuras
+  const fillLight = new THREE.DirectionalLight(0x7090c0, 0.65);
+  fillLight.position.set(-120, 100, -100);
+  scene.add(fillLight);
 
   // Terreno Deserto / Areia Vermelha (Nevada / Las Vegas)
   const groundGeo = new THREE.PlaneGeometry(3000, 3000, 32, 32);
@@ -67,6 +81,8 @@ export function createScene(container: HTMLElement): SceneContext {
     renderer,
     ambientLight,
     sunLight,
+    hemiLight,
+    fillLight,
     groundMesh: ground,
   };
 }
@@ -77,12 +93,28 @@ export function updateSceneTheme(ctx: SceneContext, theme: TrackTheme): void {
   }
   if (ctx.scene.fog instanceof THREE.FogExp2) {
     ctx.scene.fog.color.setHex(theme.fogColor ?? theme.skyColor);
+    ctx.scene.fog.density = 0.0016;
   }
-  if (ctx.ambientLight && theme.ambientColor !== undefined) {
-    ctx.ambientLight.color.setHex(theme.ambientColor);
+  if (ctx.ambientLight) {
+    if (theme.ambientColor !== undefined) {
+      ctx.ambientLight.color.setHex(theme.ambientColor);
+    }
+    ctx.ambientLight.intensity = 1.1;
   }
-  if (ctx.sunLight && theme.sunColor !== undefined) {
-    ctx.sunLight.color.setHex(theme.sunColor);
+  if (ctx.sunLight) {
+    if (theme.sunColor !== undefined) {
+      ctx.sunLight.color.setHex(theme.sunColor);
+    }
+    ctx.sunLight.intensity = 1.7;
+  }
+  if (ctx.hemiLight) {
+    ctx.hemiLight.color.setHex(theme.sunColor ?? 0xb8d0ff);
+    ctx.hemiLight.groundColor.setHex(theme.groundColor);
+    ctx.hemiLight.intensity = 0.85;
+  }
+  if (ctx.fillLight) {
+    ctx.fillLight.color.setHex(theme.ambientColor ?? 0x7090c0);
+    ctx.fillLight.intensity = 0.65;
   }
   if (ctx.groundMesh && ctx.groundMesh.material instanceof THREE.MeshStandardMaterial) {
     ctx.groundMesh.material.color.setHex(theme.groundColor);

@@ -1,8 +1,20 @@
 import { Peer, type DataConnection } from 'peerjs';
 import type { CarId, VehicleState } from '../core';
-import type { ClientMessage, NetworkPlayerInfo, NetworkPlayerState, ServerMessage } from './protocol';
+import {
+  type ClientMessage,
+  type NetworkPlayerInfo,
+  type NetworkPlayerState,
+  type ServerMessage,
+  deserializeMessage,
+  generateInviteUrl,
+  parseRoomFromUrl,
+  serializeMessage,
+} from './protocol';
+import { NetworkStateInterpolator, type InterpolatedPlayerState } from './interpolator';
+import { ExponentialBackoff, type BackoffConfig } from './reconnection';
 
 export type MultiplayerTransport = 'webrtc' | 'websocket';
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
 
 export interface ConnectedPeer {
   conn: DataConnection;
@@ -10,11 +22,23 @@ export interface ConnectedPeer {
   latestState?: NetworkPlayerState;
 }
 
-const PEER_PREFIX = 'tglegado-';
-const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
+export interface ClientConfig {
+  iceServers?: RTCIceServer[];
+  backoff?: Partial<BackoffConfig>;
+  interpolationDelayMs?: number;
+  maxExtrapolationTimeMs?: number;
+}
+
+export const PEER_PREFIX = 'tglegado-';
+
+export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
   { urls: 'stun:global.stun.twilio.com:3478' },
+  { urls: 'stun:stun.services.mozilla.com' },
 ];
 
 export class MultiplayerClient {
@@ -22,20 +46,29 @@ export class MultiplayerClient {
   public playerId: string | null = null;
   public isHost: boolean = false;
   public isConnected: boolean = false;
+  public connectionStatus: ConnectionStatus = 'disconnected';
   public roomCode: string | null = null;
   public statusMessage: string = 'Desconectado';
 
+  // Motor de interpolação e predição (Dead Reckoning + LERP 60 FPS)
+  public interpolator: NetworkStateInterpolator = new NetworkStateInterpolator();
+
+  // Gerenciador de reconexão exponencial
+  public backoff: ExponentialBackoff = new ExponentialBackoff();
+
   // Callbacks de Eventos do Jogo
-  public onLobbyUpdateCallback?: (players: NetworkPlayerInfo[], canStart: boolean) => void;
-  public onRaceStartCallback?: (players: NetworkPlayerInfo[], totalLaps: number) => void;
+  public onLobbyUpdateCallback?: (players: NetworkPlayerInfo[], canStart: boolean, roomCode?: string) => void;
+  public onRaceStartCallback?: (players: NetworkPlayerInfo[], totalLaps: number, trackId?: string) => void;
   public onWorldSyncCallback?: (players: NetworkPlayerState[]) => void;
-  public onRemoteCollisionCallback?: (sourceId: string, targetId: string, impulse: number) => void;
+  public onRemoteCollisionCallback?: (sourceId: string, targetId: string, impulse: number, x?: number, y?: number) => void;
+  public onPlayerFinishedCallback?: (playerId: string, rank: number, totalTime: number) => void;
   public onStatusChangeCallback?: (msg: string, isError: boolean) => void;
+  public onConnectionStatusChangeCallback?: (status: ConnectionStatus) => void;
 
   // Estados Internos do WebRTC (PeerJS)
   private peer: Peer | null = null;
-  private guestConn: DataConnection | null = null; // Conexão com o Host quando este cliente é Guest
-  private hostPeers: Map<string, ConnectedPeer> = new Map(); // Peers conectados quando este cliente é Host
+  private guestConn: DataConnection | null = null;
+  private hostPeers: Map<string, ConnectedPeer> = new Map();
   private localPlayerInfo: NetworkPlayerInfo | null = null;
   private localLatestState?: NetworkPlayerState;
   private hostSyncTimer: ReturnType<typeof setInterval> | null = null;
@@ -43,14 +76,62 @@ export class MultiplayerClient {
 
   // Estados Internos do WebSocket
   private ws: WebSocket | null = null;
+  private lastWsUrl: string | null = null;
 
-  constructor() {}
+  // Estados de Sessão para Auto-Reconexão
+  private lastSessionName: string = 'Piloto';
+  private lastSessionCarId: CarId = 'cannibal';
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private isManualDisconnect: boolean = false;
+  private iceServers: RTCIceServer[] = DEFAULT_ICE_SERVERS;
 
-  private setStatus(msg: string, isError: boolean = false): void {
+  constructor(config?: ClientConfig) {
+    if (config?.iceServers) {
+      this.iceServers = config.iceServers;
+    }
+    if (config?.backoff) {
+      this.backoff = new ExponentialBackoff(config.backoff);
+    }
+    if (config?.interpolationDelayMs !== undefined) {
+      this.interpolator.interpolationDelayMs = config.interpolationDelayMs;
+    }
+    if (config?.maxExtrapolationTimeMs !== undefined) {
+      this.interpolator.maxExtrapolationTimeMs = config.maxExtrapolationTimeMs;
+    }
+  }
+
+  public setStatus(msg: string, isError: boolean = false): void {
     this.statusMessage = msg;
     if (this.onStatusChangeCallback) {
       this.onStatusChangeCallback(msg, isError);
     }
+  }
+
+  public setConnectionStatus(status: ConnectionStatus): void {
+    this.connectionStatus = status;
+    this.isConnected = status === 'connected';
+    if (this.onConnectionStatusChangeCallback) {
+      this.onConnectionStatusChangeCallback(status);
+    }
+  }
+
+  // ==========================================
+  // HELPERS DE URL E SALAS
+  // ==========================================
+
+  /**
+   * Extrai o código da sala de uma URL ou query string
+   */
+  public static parseRoomFromUrl(search?: string): string | null {
+    return parseRoomFromUrl(search);
+  }
+
+  /**
+   * Retorna a URL compartilhável para convidar amigos para a sala atual
+   */
+  public getInviteUrl(origin?: string): string | null {
+    if (!this.roomCode) return null;
+    return generateInviteUrl(this.roomCode, origin);
   }
 
   // ==========================================
@@ -59,13 +140,18 @@ export class MultiplayerClient {
 
   /**
    * Cria uma sala WebRTC e atua como Host (Serverless Hub).
-   * @param roomCode Código da sala (ex: 'TURBO7'). Se não fornecido, gera um código aleatório.
    */
   public createP2PRoom(name: string, carId: CarId, customRoomCode?: string): Promise<string> {
-    this.disconnect();
+    this.clearReconnectTimer();
+    this.isManualDisconnect = false;
+    this.cleanupTransports();
+
     this.transport = 'webrtc';
     this.isHost = true;
-    this.setStatus('Conectando ao broker de sinalização WebRTC...');
+    this.lastSessionName = name;
+    this.lastSessionCarId = carId;
+    this.setConnectionStatus('connecting');
+    this.setStatus('Conectando aos servidores STUN/broker WebRTC...');
 
     return new Promise((resolve, reject) => {
       const code = (customRoomCode || this.generateRoomCode()).trim().toUpperCase();
@@ -75,12 +161,13 @@ export class MultiplayerClient {
       try {
         this.peer = new Peer(peerId, {
           config: {
-            iceServers: DEFAULT_ICE_SERVERS,
+            iceServers: this.iceServers,
           },
         });
 
-        this.peer.on('open', (_id) => {
-          this.isConnected = true;
+        this.peer.on('open', () => {
+          this.setConnectionStatus('connected');
+          this.backoff.reset();
           this.playerId = `host_${Math.random().toString(36).substring(2, 7)}`;
 
           this.localPlayerInfo = {
@@ -104,18 +191,33 @@ export class MultiplayerClient {
         this.peer.on('error', (err: any) => {
           console.error('[WebRTC Host Peer Error]', err);
           const errorMsg = err.type === 'unavailable-id'
-            ? `O código ${code} já está em uso. Tente outro código.`
+            ? `O código de sala ${code} já está em uso. Tente outro código.`
             : `Erro no WebRTC: ${err.message || err.type}`;
+
           this.setStatus(errorMsg, true);
-          this.disconnect();
-          reject(new Error(errorMsg));
+          if (this.connectionStatus === 'connecting') {
+            this.setConnectionStatus('failed');
+            this.cleanupTransports();
+            reject(new Error(errorMsg));
+          } else {
+            this.handleUnexpectedDisconnection();
+          }
         });
 
         this.peer.on('disconnected', () => {
-          this.setStatus('Conexão com o broker reiniciando...');
-          this.peer?.reconnect();
+          this.setStatus('Sinalização WebRTC desconectada. Tentando reconectar broker...');
+          if (!this.isManualDisconnect && this.peer && !this.peer.destroyed) {
+            this.peer.reconnect();
+          }
+        });
+
+        this.peer.on('close', () => {
+          if (!this.isManualDisconnect) {
+            this.handleUnexpectedDisconnection();
+          }
         });
       } catch (err) {
+        this.setConnectionStatus('failed');
         this.setStatus('Falha ao inicializar WebRTC Peer.', true);
         reject(err);
       }
@@ -126,28 +228,41 @@ export class MultiplayerClient {
    * Conecta a uma sala WebRTC existente como Convidado (Guest).
    */
   public joinP2PRoom(roomCode: string, name: string, carId: CarId): Promise<void> {
-    this.disconnect();
+    this.clearReconnectTimer();
+    this.isManualDisconnect = false;
+    this.cleanupTransports();
+
     this.transport = 'webrtc';
     this.isHost = false;
+    this.lastSessionName = name;
+    this.lastSessionCarId = carId;
+
     const cleanCode = roomCode.trim().toUpperCase();
     this.roomCode = cleanCode;
     const hostPeerId = `${PEER_PREFIX}${cleanCode.toLowerCase()}`;
 
-    this.setStatus(`Conectando à sala ${cleanCode}...`);
+    this.setConnectionStatus('connecting');
+    this.setStatus(`Buscando sala ${cleanCode} via WebRTC STUN...`);
 
     return new Promise((resolve, reject) => {
+      let isResolved = false;
+
       try {
         this.peer = new Peer({
           config: {
-            iceServers: DEFAULT_ICE_SERVERS,
+            iceServers: this.iceServers,
           },
         });
 
-        const timeout = setTimeout(() => {
-          this.setStatus(`Tempo limite excedido ao buscar sala ${cleanCode}.`, true);
-          this.disconnect();
-          reject(new Error('Timeout ao conectar à sala'));
-        }, 12000);
+        const connectionTimeout = setTimeout(() => {
+          if (!isResolved) {
+            const timeoutMsg = `Tempo limite ao conectar à sala ${cleanCode}. Verifique se o Host está online.`;
+            this.setStatus(timeoutMsg, true);
+            this.setConnectionStatus('failed');
+            this.cleanupTransports();
+            reject(new Error(timeoutMsg));
+          }
+        }, 14000);
 
         this.peer.on('open', () => {
           const conn = this.peer!.connect(hostPeerId, {
@@ -157,10 +272,12 @@ export class MultiplayerClient {
           this.guestConn = conn;
 
           conn.on('open', () => {
-            clearTimeout(timeout);
-            this.isConnected = true;
-            this.setStatus(`Conectado à sala ${cleanCode} via WebRTC P2P!`);
-            this.send({ type: 'join_lobby', name, carId });
+            clearTimeout(connectionTimeout);
+            isResolved = true;
+            this.setConnectionStatus('connected');
+            this.backoff.reset();
+            this.setStatus(`Conectado à sala ${cleanCode}!`);
+            this.send({ type: 'join_lobby', name, carId, roomCode: cleanCode });
             resolve();
           });
 
@@ -170,29 +287,46 @@ export class MultiplayerClient {
 
           conn.on('close', () => {
             this.setStatus('Conexão com o Host encerrada.', true);
-            this.isConnected = false;
-            this.playerId = null;
+            if (!this.isManualDisconnect) {
+              this.handleUnexpectedDisconnection();
+            }
           });
 
           conn.on('error', (err) => {
-            clearTimeout(timeout);
+            clearTimeout(connectionTimeout);
             console.error('[WebRTC Guest Connection Error]', err);
-            this.setStatus('Erro ao comunicar com o Host da sala.', true);
-            reject(err);
+            this.setStatus('Erro na comunicação com o Host da sala.', true);
+            if (!isResolved) {
+              this.setConnectionStatus('failed');
+              reject(err);
+            }
           });
         });
 
         this.peer.on('error', (err: any) => {
-          clearTimeout(timeout);
+          clearTimeout(connectionTimeout);
           console.error('[WebRTC Guest Peer Error]', err);
           const errorMsg = err.type === 'peer-unavailable'
             ? `Sala "${cleanCode}" não encontrada. Verifique o código com o Host.`
             : `Erro WebRTC: ${err.message || err.type}`;
+
           this.setStatus(errorMsg, true);
-          this.disconnect();
-          reject(new Error(errorMsg));
+          if (!isResolved) {
+            this.setConnectionStatus('failed');
+            this.cleanupTransports();
+            reject(new Error(errorMsg));
+          } else {
+            this.handleUnexpectedDisconnection();
+          }
+        });
+
+        this.peer.on('disconnected', () => {
+          if (!this.isManualDisconnect && this.peer && !this.peer.destroyed) {
+            this.peer.reconnect();
+          }
         });
       } catch (err) {
+        this.setConnectionStatus('failed');
         this.setStatus('Falha ao iniciar cliente WebRTC.', true);
         reject(err);
       }
@@ -200,7 +334,7 @@ export class MultiplayerClient {
   }
 
   /**
-   * Manipula novas conexões recebidas pelo Host.
+   * Manipula conexões recebidas pelo Host
    */
   private handleIncomingPeerConnection(conn: DataConnection): void {
     const peerPlayerId = `player_${this.hostPeers.size + 2}_${Math.random().toString(36).substring(2, 6)}`;
@@ -222,11 +356,12 @@ export class MultiplayerClient {
     this.hostPeers.set(peerPlayerId, connectedPeer);
 
     conn.on('open', () => {
-      // Envia mensagem de boas-vindas para o guest
+      // Envia boas-vindas com ID e código da sala
       conn.send({
         type: 'welcome',
         playerId: peerPlayerId,
         isHost: false,
+        roomCode: this.roomCode || undefined,
       } as ServerMessage);
 
       this.triggerLobbyUpdate();
@@ -235,7 +370,8 @@ export class MultiplayerClient {
 
     conn.on('data', (raw) => {
       try {
-        const msg: ClientMessage = typeof raw === 'string' ? JSON.parse(raw) : (raw as ClientMessage);
+        const msg = deserializeMessage<ClientMessage>(raw);
+        if (!msg) return;
 
         if (msg.type === 'join_lobby') {
           connectedPeer.info.name = msg.name || connectedPeer.info.name;
@@ -246,29 +382,48 @@ export class MultiplayerClient {
           connectedPeer.info.carId = msg.carId;
           this.triggerLobbyUpdate();
         } else if (msg.type === 'send_state') {
-          connectedPeer.latestState = {
+          const stateSnap: NetworkPlayerState = {
             id: peerPlayerId,
             state: msg.state,
             lap: msg.lap,
             progress: msg.progress,
             nitroActive: msg.nitroActive,
             steer: msg.steer,
-            timestamp: performance.now(),
+            timestamp: msg.timestamp || (typeof performance !== 'undefined' ? performance.now() : Date.now()),
           };
+          connectedPeer.latestState = stateSnap;
+          this.interpolator.pushSnapshot(peerPlayerId, stateSnap);
         } else if (msg.type === 'collision_event') {
-          // Repassa colisão para os demais
           this.broadcastServerMessage(
             {
               type: 'remote_collision',
               sourceId: peerPlayerId,
               targetId: msg.targetId,
               impulse: msg.impulse,
+              x: msg.x,
+              y: msg.y,
             },
             peerPlayerId
           );
           if (this.onRemoteCollisionCallback) {
-            this.onRemoteCollisionCallback(peerPlayerId, msg.targetId, msg.impulse);
+            this.onRemoteCollisionCallback(peerPlayerId, msg.targetId, msg.impulse, msg.x, msg.y);
           }
+        } else if (msg.type === 'finish_race') {
+          this.broadcastServerMessage({
+            type: 'player_finished',
+            playerId: peerPlayerId,
+            rank: msg.rank || (this.hostPeers.size + 1),
+            totalTime: msg.totalTime,
+          });
+          if (this.onPlayerFinishedCallback) {
+            this.onPlayerFinishedCallback(peerPlayerId, msg.rank || 1, msg.totalTime);
+          }
+        } else if (msg.type === 'ping') {
+          conn.send({
+            type: 'pong',
+            clientTime: msg.clientTime,
+            serverTime: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+          } as ServerMessage);
         }
       } catch (err) {
         console.error('[Host Error Processing Guest Message]', err);
@@ -277,67 +432,182 @@ export class MultiplayerClient {
 
     conn.on('close', () => {
       this.hostPeers.delete(peerPlayerId);
+      this.interpolator.removePlayer(peerPlayerId);
       this.broadcastServerMessage({ type: 'player_disconnected', playerId: peerPlayerId });
       this.triggerLobbyUpdate();
-      this.setStatus(`Um piloto saiu da sala.`);
+      this.setStatus(`Piloto desconectou da sala.`);
     });
   }
 
-  /**
-   * Retorna a lista completa de jogadores (Host + Guests).
-   */
-  private getAllNetworkPlayers(): NetworkPlayerInfo[] {
-    const list: NetworkPlayerInfo[] = [];
-    if (this.localPlayerInfo) {
-      list.push(this.localPlayerInfo);
-    }
-    for (const p of this.hostPeers.values()) {
-      list.push(p.info);
-    }
-    return list;
+  // ==========================================
+  // MODO 2: WebSocket Relay (Node / Render / Dev)
+  // ==========================================
+
+  public connect(customUrl?: string): Promise<void> {
+    return this.connectWebSocket(customUrl);
   }
 
-  /**
-   * Dispara atualização do Lobby para todos os participantes quando este cliente é Host.
-   */
-  private triggerLobbyUpdate(): void {
-    if (!this.isHost) return;
-    const players = this.getAllNetworkPlayers();
-    const canStart = players.length >= 2 && players.every((p) => p.ready);
+  public connectWebSocket(customUrl?: string): Promise<void> {
+    this.clearReconnectTimer();
+    this.isManualDisconnect = false;
+    this.cleanupTransports();
 
-    const updateMsg: ServerMessage = {
-      type: 'lobby_update',
-      players,
-      canStart,
-    };
+    this.transport = 'websocket';
+    this.setConnectionStatus('connecting');
+    this.setStatus('Conectando ao servidor WebSocket Relay...');
 
-    this.broadcastServerMessage(updateMsg);
+    return new Promise((resolve, reject) => {
+      const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const defaultHost = typeof window !== 'undefined' ? window.location.host : 'localhost:8080';
+      const wsUrl = customUrl || `${protocol}//${defaultHost}/ws`;
+      this.lastWsUrl = wsUrl;
 
-    if (this.onLobbyUpdateCallback) {
-      this.onLobbyUpdateCallback(players, canStart);
-    }
-  }
-
-  /**
-   * Envia uma mensagem do Host para todos os Guests conectados.
-   */
-  private broadcastServerMessage(msg: ServerMessage, excludeId?: string): void {
-    const payload = msg;
-    for (const [id, peer] of this.hostPeers) {
-      if (excludeId && id === excludeId) continue;
       try {
-        if (peer.conn.open) {
-          peer.conn.send(payload);
-        }
+        this.ws = new WebSocket(wsUrl);
+
+        this.ws.onopen = () => {
+          this.setConnectionStatus('connected');
+          this.backoff.reset();
+          this.setStatus(`Conectado ao servidor WebSocket (${wsUrl})`);
+          resolve();
+        };
+
+        this.ws.onerror = (err) => {
+          this.setStatus('Erro ao comunicar com o servidor WebSocket.', true);
+          if (this.connectionStatus === 'connecting') {
+            this.setConnectionStatus('failed');
+            reject(err);
+          }
+        };
+
+        this.ws.onclose = () => {
+          if (!this.isManualDisconnect) {
+            this.handleUnexpectedDisconnection();
+          } else {
+            this.setConnectionStatus('disconnected');
+            this.setStatus('Servidor WebSocket desconectado.');
+          }
+        };
+
+        this.ws.onmessage = (event) => {
+          this.handleServerMessage(event.data);
+        };
       } catch (e) {
-        console.error(`[Broadcast Error to ${id}]`, e);
+        this.setConnectionStatus('failed');
+        this.setStatus('Falha ao instanciar conexão WebSocket.', true);
+        reject(e);
       }
+    });
+  }
+
+  // ==========================================
+  // PROCESSAMENTO DE MENSAGENS E RECONEXÃO
+  // ==========================================
+
+  public handleServerMessage(raw: unknown): void {
+    try {
+      const msg = deserializeMessage<ServerMessage>(raw);
+      if (!msg) return;
+
+      if (msg.type === 'welcome') {
+        this.playerId = msg.playerId;
+        this.isHost = msg.isHost;
+        if (msg.roomCode) {
+          this.roomCode = msg.roomCode;
+        }
+      } else if (msg.type === 'lobby_update') {
+        if (msg.roomCode) {
+          this.roomCode = msg.roomCode;
+        }
+        if (this.onLobbyUpdateCallback) {
+          this.onLobbyUpdateCallback(msg.players, msg.canStart, this.roomCode || undefined);
+        }
+      } else if (msg.type === 'race_start') {
+        this.isRacing = true;
+        if (this.onRaceStartCallback) {
+          this.onRaceStartCallback(msg.players, msg.totalLaps, msg.trackId);
+        }
+      } else if (msg.type === 'world_sync') {
+        for (const st of msg.players) {
+          if (st.id !== this.playerId) {
+            this.interpolator.pushSnapshot(st.id, st);
+          }
+        }
+        if (this.onWorldSyncCallback) {
+          this.onWorldSyncCallback(msg.players);
+        }
+      } else if (msg.type === 'remote_collision') {
+        if (this.onRemoteCollisionCallback) {
+          this.onRemoteCollisionCallback(msg.sourceId, msg.targetId, msg.impulse, msg.x, msg.y);
+        }
+      } else if (msg.type === 'player_finished') {
+        if (this.onPlayerFinishedCallback) {
+          this.onPlayerFinishedCallback(msg.playerId, msg.rank, msg.totalTime);
+        }
+      } else if (msg.type === 'player_disconnected') {
+        this.interpolator.removePlayer(msg.playerId);
+      }
+    } catch (e) {
+      console.error('[Multiplayer Client Message Error]', e);
     }
   }
 
   /**
-   * Inicia o loop de sincronização física 60 Hz / 30 Hz do Host.
+   * Trata desconexão inesperada e aciona auto-reconexão com backoff exponencial
    */
+  private handleUnexpectedDisconnection(): void {
+    if (this.isManualDisconnect) return;
+
+    if (!this.backoff.canRetry()) {
+      this.setConnectionStatus('failed');
+      this.setStatus('Conexão perdida. Limite máximo de tentativas de reconexão atingido.', true);
+      return;
+    }
+
+    const attempt = this.backoff.nextAttempt();
+    const delay = this.backoff.getDelay(attempt - 1);
+
+    this.setConnectionStatus('reconnecting');
+    this.setStatus(`Conexão instável. Reconectando em ${(delay / 1000).toFixed(1)}s (tentativa ${attempt}/${this.backoff.maxRetries})...`, true);
+
+    this.clearReconnectTimer();
+    this.reconnectTimer = setTimeout(() => {
+      if (this.isManualDisconnect) return;
+
+      if (this.transport === 'webrtc') {
+        if (this.isHost && this.roomCode) {
+          this.createP2PRoom(this.lastSessionName, this.lastSessionCarId, this.roomCode).catch(console.error);
+        } else if (!this.isHost && this.roomCode) {
+          this.joinP2PRoom(this.roomCode, this.lastSessionName, this.lastSessionCarId).catch(console.error);
+        }
+      } else if (this.transport === 'websocket') {
+        this.connectWebSocket(this.lastWsUrl || undefined)
+          .then(() => {
+            this.joinLobby(this.lastSessionName, this.lastSessionCarId);
+          })
+          .catch(console.error);
+      }
+    }, delay);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  // ==========================================
+  // LOOP DE SINCRONIZAÇÃO E INTERPOLAÇÃO
+  // ==========================================
+
+  /**
+   * Obtém o estado 60 FPS suavemente interpolado (ou predito via Dead Reckoning) para um piloto remoto
+   */
+  public getInterpolatedState(playerId: string, renderTime?: number): InterpolatedPlayerState | null {
+    return this.interpolator.getInterpolatedState(playerId, renderTime);
+  }
+
   private startHostSyncLoop(): void {
     this.stopHostSyncLoop();
     this.isRacing = true;
@@ -359,6 +629,7 @@ export class MultiplayerClient {
         const syncMsg: ServerMessage = {
           type: 'world_sync',
           players: states,
+          timestamp: typeof performance !== 'undefined' ? performance.now() : Date.now(),
         };
         this.broadcastServerMessage(syncMsg);
 
@@ -377,102 +648,63 @@ export class MultiplayerClient {
     this.isRacing = false;
   }
 
-  // ==========================================
-  // MODO 2: WebSocket Relay (Render / Node.js / Localhost)
-  // ==========================================
-
-  public connect(customUrl?: string): Promise<void> {
-    return this.connectWebSocket(customUrl);
-  }
-
-  public connectWebSocket(customUrl?: string): Promise<void> {
-    this.disconnect();
-    this.transport = 'websocket';
-    this.setStatus('Conectando ao servidor WebSocket...');
-
-    return new Promise((resolve, reject) => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = customUrl || `${protocol}//${window.location.host}/ws`;
-
+  private broadcastServerMessage(msg: ServerMessage, excludeId?: string): void {
+    const payload = msg;
+    for (const [id, peer] of this.hostPeers) {
+      if (excludeId && id === excludeId) continue;
       try {
-        this.ws = new WebSocket(wsUrl);
-
-        this.ws.onopen = () => {
-          this.isConnected = true;
-          this.setStatus(`Conectado ao servidor WebSocket (${wsUrl})`);
-          resolve();
-        };
-
-        this.ws.onerror = (err) => {
-          this.isConnected = false;
-          this.setStatus('Erro ao conectar ao servidor WebSocket.', true);
-          reject(err);
-        };
-
-        this.ws.onclose = () => {
-          this.isConnected = false;
-          this.playerId = null;
-          this.setStatus('Servidor WebSocket desconectado.', true);
-        };
-
-        this.ws.onmessage = (event) => {
-          this.handleServerMessage(event.data);
-        };
+        if (peer.conn.open) {
+          peer.conn.send(payload);
+        }
       } catch (e) {
-        this.setStatus('Falha ao instanciar WebSocket.', true);
-        reject(e);
+        console.error(`[Broadcast Error to ${id}]`, e);
       }
-    });
+    }
   }
 
-  // ==========================================
-  // Processamento Unificado de Mensagens
-  // ==========================================
+  private getAllNetworkPlayers(): NetworkPlayerInfo[] {
+    const list: NetworkPlayerInfo[] = [];
+    if (this.localPlayerInfo) {
+      list.push(this.localPlayerInfo);
+    }
+    for (const p of this.hostPeers.values()) {
+      list.push(p.info);
+    }
+    return list;
+  }
 
-  private handleServerMessage(raw: unknown): void {
-    try {
-      const msg: ServerMessage = typeof raw === 'string' ? JSON.parse(raw) : (raw as ServerMessage);
+  private triggerLobbyUpdate(): void {
+    if (!this.isHost) return;
+    const players = this.getAllNetworkPlayers();
+    const canStart = players.length >= 2 && players.every((p) => p.ready);
 
-      if (msg.type === 'welcome') {
-        this.playerId = msg.playerId;
-        this.isHost = msg.isHost;
-      } else if (msg.type === 'lobby_update') {
-        if (this.onLobbyUpdateCallback) {
-          this.onLobbyUpdateCallback(msg.players, msg.canStart);
-        }
-      } else if (msg.type === 'race_start') {
-        if (this.onRaceStartCallback) {
-          this.onRaceStartCallback(msg.players, msg.totalLaps);
-        }
-      } else if (msg.type === 'world_sync') {
-        if (this.onWorldSyncCallback) {
-          this.onWorldSyncCallback(msg.players);
-        }
-      } else if (msg.type === 'remote_collision') {
-        if (this.onRemoteCollisionCallback) {
-          this.onRemoteCollisionCallback(msg.sourceId, msg.targetId, msg.impulse);
-        }
-      }
-    } catch (e) {
-      console.error('[Multiplayer Client Message Parse Error]', e);
+    const updateMsg: ServerMessage = {
+      type: 'lobby_update',
+      players,
+      canStart,
+      roomCode: this.roomCode || undefined,
+    };
+
+    this.broadcastServerMessage(updateMsg);
+
+    if (this.onLobbyUpdateCallback) {
+      this.onLobbyUpdateCallback(players, canStart, this.roomCode || undefined);
     }
   }
 
   // ==========================================
-  // API Pública do Jogo
+  // API PÚBLICA DE ENVIO E GERENCIAMENTO
   // ==========================================
 
   public send(msg: ClientMessage): void {
     if (this.transport === 'websocket') {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify(msg));
+        this.ws.send(serializeMessage(msg));
       }
       return;
     }
 
-    // WebRTC Mode
     if (this.isHost) {
-      // Se sou o Host, processo internamente minhas próprias ações de piloto
       if (msg.type === 'set_ready') {
         if (this.localPlayerInfo) {
           this.localPlayerInfo.ready = msg.ready;
@@ -487,7 +719,7 @@ export class MultiplayerClient {
           progress: msg.progress,
           nitroActive: msg.nitroActive,
           steer: msg.steer,
-          timestamp: performance.now(),
+          timestamp: msg.timestamp || (typeof performance !== 'undefined' ? performance.now() : Date.now()),
         };
       } else if (msg.type === 'collision_event') {
         this.broadcastServerMessage({
@@ -495,10 +727,18 @@ export class MultiplayerClient {
           sourceId: this.playerId || 'host',
           targetId: msg.targetId,
           impulse: msg.impulse,
+          x: msg.x,
+          y: msg.y,
+        });
+      } else if (msg.type === 'finish_race') {
+        this.broadcastServerMessage({
+          type: 'player_finished',
+          playerId: this.playerId || 'host',
+          rank: msg.rank || 1,
+          totalTime: msg.totalTime,
         });
       }
     } else {
-      // Se sou Guest, envio para o Host via DataChannel
       if (this.guestConn && this.guestConn.open) {
         this.guestConn.send(msg);
       }
@@ -506,16 +746,21 @@ export class MultiplayerClient {
   }
 
   public joinLobby(name: string, carId: CarId): void {
+    this.lastSessionName = name;
+    this.lastSessionCarId = carId;
+
     if (this.isHost && this.localPlayerInfo) {
       this.localPlayerInfo.name = name;
       this.localPlayerInfo.carId = carId;
       this.triggerLobbyUpdate();
     } else {
-      this.send({ type: 'join_lobby', name, carId });
+      this.send({ type: 'join_lobby', name, carId, roomCode: this.roomCode || undefined });
     }
   }
 
   public setReady(ready: boolean, carId: CarId): void {
+    this.lastSessionCarId = carId;
+
     if (this.isHost && this.localPlayerInfo) {
       this.localPlayerInfo.ready = ready;
       this.localPlayerInfo.carId = carId;
@@ -525,22 +770,24 @@ export class MultiplayerClient {
     }
   }
 
-  public startRace(): void {
+  public startRace(trackId?: string): void {
     if (this.isHost) {
       const players = this.getAllNetworkPlayers();
       const startMsg: ServerMessage = {
         type: 'race_start',
         players,
         totalLaps: 3,
+        trackId,
+        startTime: typeof performance !== 'undefined' ? performance.now() : Date.now(),
       };
       this.broadcastServerMessage(startMsg);
       this.startHostSyncLoop();
 
       if (this.onRaceStartCallback) {
-        this.onRaceStartCallback(players, 3);
+        this.onRaceStartCallback(players, 3, trackId);
       }
     } else {
-      this.send({ type: 'start_race' });
+      this.send({ type: 'start_race', trackId });
     }
   }
 
@@ -552,17 +799,21 @@ export class MultiplayerClient {
       progress,
       nitroActive,
       steer,
+      timestamp: typeof performance !== 'undefined' ? performance.now() : Date.now(),
     });
   }
 
-  public sendCollision(targetId: string, impulse: number): void {
-    this.send({ type: 'collision_event', targetId, impulse });
+  public sendCollision(targetId: string, impulse: number, x?: number, y?: number): void {
+    this.send({ type: 'collision_event', targetId, impulse, x, y });
   }
 
-  public disconnect(): void {
+  public sendFinish(totalTime: number, bestLapTime: number | null, rank?: number): void {
+    this.send({ type: 'finish_race', totalTime, bestLapTime, rank });
+  }
+
+  private cleanupTransports(): void {
     this.stopHostSyncLoop();
 
-    // Fecha WebRTC
     if (this.guestConn) {
       try {
         this.guestConn.close();
@@ -584,7 +835,6 @@ export class MultiplayerClient {
       this.peer = null;
     }
 
-    // Fecha WebSocket
     if (this.ws) {
       try {
         this.ws.close();
@@ -592,7 +842,15 @@ export class MultiplayerClient {
       this.ws = null;
     }
 
-    this.isConnected = false;
+    this.interpolator.clear();
+  }
+
+  public disconnect(): void {
+    this.isManualDisconnect = true;
+    this.clearReconnectTimer();
+    this.cleanupTransports();
+
+    this.setConnectionStatus('disconnected');
     this.playerId = null;
     this.isHost = false;
     this.roomCode = null;

@@ -3,7 +3,7 @@ import { buildTrack, DEFAULT_TRACK_DEFINITION, getTrackDefinition, type Track, t
 import { RaceManager, type RaceMode } from './race';
 import { TimeAttackManager } from './race/timeattack';
 import { HUD, InputManager, Minimap, ResultsScreen } from './gameplay';
-import { AuthGate, MenuSystem, type MenuStartOptions } from './ui';
+import { AuthGate, MenuSystem, PauseMenu, type MenuStartOptions } from './ui';
 import { soundSystem } from './audio';
 import {
   ChaseCamera,
@@ -133,20 +133,48 @@ app.appendChild(countdownEl);
 let lastCountdownVal: string | null = null;
 let isResultsShown = false;
 let isGameActive = false;
+let isPaused = false;
 let wasInSlipstream = false;
 let lastPlayerLap = 1;
 
-// 5. Gerenciador de Entrada
+// 5. Configuração do Menu de Pausa
+const pauseMenu = new PauseMenu(app, {
+  onResume: () => {
+    isPaused = false;
+    soundSystem.playBeep(660);
+  },
+  onRestart: () => {
+    isPaused = false;
+    startNewRace(currentStartOptions);
+  },
+  onMainMenu: () => {
+    isPaused = false;
+    showMenu();
+  },
+  onPause: () => {
+    isPaused = true;
+    soundSystem.updateEngine(0, raceManager.player.stats.topSpeed, false);
+    soundSystem.updateSkid(0);
+  },
+});
+
+// 6. Gerenciador de Entrada
 const inputManager = new InputManager((code) => {
   if (code === 'KeyM') {
     soundSystem.toggleMute();
   }
-  if (code === 'Escape' && isGameActive && !menuSystem) {
-    showMenu();
+  if (code === 'Escape') {
+    if (isResultsShown) {
+      showMenu();
+    } else if (isGameActive) {
+      pauseMenu.toggle();
+    }
+  } else if ((code === 'Space' || code === 'Enter') && isResultsShown) {
+    startNewRace(currentStartOptions);
   }
 });
 
-// 6. Configuração do Menu Principal
+// 7. Configuração do Menu Principal
 let currentStartOptions: MenuStartOptions = {
   mode: 'race',
   carId: 'cannibal',
@@ -217,6 +245,9 @@ function startNewRace(options: MenuStartOptions): void {
   rebuildCarMeshes();
   resultsScreen.hide();
   isResultsShown = false;
+  isPaused = false;
+  pauseMenu.hide();
+  pauseMenu.showPauseButton();
   isGameActive = true;
   lastCountdownVal = null;
   wasInSlipstream = false;
@@ -225,16 +256,19 @@ function startNewRace(options: MenuStartOptions): void {
 
 function showMenu(): void {
   isGameActive = false;
+  isPaused = false;
+  pauseMenu.hide();
+  pauseMenu.hidePauseButton();
   resultsScreen.hide();
   soundSystem.playMenuMusic();
   menuSystem.show();
 }
 
-// 7. Loop de Jogo Principal
+// 8. Loop de Jogo Principal
 const gameLoop = new GameLoop(
   // Atualização de Física (60 Hz)
   (fixedDt) => {
-    if (!isGameActive) return;
+    if (!isGameActive || isPaused) return;
 
     const input = inputManager.getInput();
     const wasNitroActive = raceManager.player.nitroSystem.isActive;
@@ -295,6 +329,8 @@ const gameLoop = new GameLoop(
     // Fim de prova do jogador
     if (raceManager.status === 'finished' && !isResultsShown) {
       isResultsShown = true;
+      pauseMenu.hide();
+      pauseMenu.hidePauseButton();
       soundSystem.playCrowdCheer();
 
       if (raceManager.config.mode === 'timeattack' && raceManager.player.lapTracker.bestLapTime) {
@@ -315,7 +351,7 @@ const gameLoop = new GameLoop(
 
   // Atualização Visual por Frame
   (frameDt) => {
-    if (isGameActive) {
+    if (isGameActive && !isPaused) {
       // Atualiza malhas 3D de todos os carros e efeitos de pneu
       for (const racer of raceManager.racers) {
         const meshInst = carMeshMap.get(racer.id);
@@ -391,7 +427,7 @@ const gameLoop = new GameLoop(
 
 gameLoop.start();
 
-// 8. Inicialização com Proteção de Senha (Vercel Gatekeeper)
+// 9. Inicialização com Proteção de Senha (Vercel Gatekeeper)
 if (AuthGate.isUnlocked()) {
   showMenu();
 } else {
