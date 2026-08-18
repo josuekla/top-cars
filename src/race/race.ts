@@ -360,7 +360,23 @@ export class RaceManager {
     });
   }
 
+  public registerRemoteFinish(racerId: string, rank?: number, finishTime?: number): void {
+    const racer = this.racers.find((r) => r.id === racerId);
+    if (racer && racer.finishRank === null) {
+      this.finishCounter += 1;
+      racer.finishRank = rank !== undefined ? rank : this.finishCounter;
+      racer.finishTime = finishTime !== undefined ? finishTime : this.totalTime;
+      racer.lapTracker.isFinished = true;
+      this.updateLeaderboard();
+    }
+  }
+
+  public applyRemoteCollision(impulse: number): void {
+    this.lastCollisionImpulse = Math.max(this.lastCollisionImpulse, impulse);
+  }
+
   public getLeaderboard(): Racer[] {
     return [...this.racers].sort((a, b) => a.currentRank - b.currentRank);
   }
 }
+
