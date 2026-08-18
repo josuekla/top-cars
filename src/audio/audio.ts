@@ -98,7 +98,8 @@ export class SoundSystem {
 
         if (this.currentMusic) {
           this.currentMusic.pause();
-          this.currentMusic.src = '';
+          this.currentMusic.removeAttribute('src');
+          this.currentMusic.load();
           this.currentMusic = null;
         }
 
@@ -118,13 +119,13 @@ export class SoundSystem {
                 this.fadeInCurrent(this.musicVolume, 400);
               }
             })
-            .catch((_err) => {
-              // Se bloqueado pelo autoplay do navegador, mantém na fila para a primeira interação
+            .catch(() => {
+              // Se bloqueado pelo autoplay do navegador, aguarda primeira interação
               this.pendingMusicUrl = musicUrl;
             });
         }
       } catch {
-        // Fallback silencioso
+        this.pendingMusicUrl = musicUrl;
       }
     };
 

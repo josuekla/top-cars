@@ -681,11 +681,8 @@ export class MenuSystem {
       input.value = roomCode.toUpperCase();
     }
     const car = ALL_CARS[this.selectedCarIndex];
-    this.mpClient.joinP2PRoom(roomCode, 'Piloto Desafiante', car.id).catch(() => {
-      // Se falhar WebRTC P2P (ex: ambiente restrito), tenta WebSocket Relay
-      this.mpClient.connect().then(() => {
-        this.mpClient.joinLobby('Piloto Desafiante', car.id);
-      }).catch(console.error);
+    this.mpClient.joinP2PRoom(roomCode, 'Piloto Desafiante', car.id).catch((err) => {
+      console.warn('[WebRTC Join Error]', err);
     });
   }
 
@@ -832,11 +829,8 @@ export class MenuSystem {
     if (btnCreateP2P) {
       btnCreateP2P.onclick = () => {
         const car = ALL_CARS[this.selectedCarIndex];
-        this.mpClient.createP2PRoom('Piloto 1 (Host)', car.id).catch(() => {
-          // Fallback para WebSocket se WebRTC não puder abrir sala
-          this.mpClient.connect().then(() => {
-            this.mpClient.joinLobby('Piloto 1 (Host)', car.id);
-          }).catch(console.error);
+        this.mpClient.createP2PRoom('Piloto 1 (Host)', car.id).catch((err) => {
+          console.warn('[WebRTC Create Room Error]', err);
         });
       };
     }

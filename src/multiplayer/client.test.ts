@@ -290,7 +290,7 @@ describe('MultiplayerClient Core Architecture', () => {
     expect(client.isConnected).toBe(false);
     expect(client.connectionStatus).toBe('disconnected');
     expect(client.playerId).toBeNull();
-    expect(DEFAULT_ICE_SERVERS.length).toBeGreaterThanOrEqual(5);
+    expect(DEFAULT_ICE_SERVERS.length).toBeGreaterThanOrEqual(2);
     expect(DEFAULT_ICE_SERVERS.some((s) => JSON.stringify(s).includes('stun.l.google.com'))).toBe(true);
   });
 

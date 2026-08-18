@@ -34,11 +34,6 @@ export const PEER_PREFIX = 'tglegado-';
 export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-  { urls: 'stun:stun4.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' },
-  { urls: 'stun:stun.services.mozilla.com' },
 ];
 
 export class MultiplayerClient {
@@ -451,6 +446,14 @@ export class MultiplayerClient {
     this.clearReconnectTimer();
     this.isManualDisconnect = false;
     this.cleanupTransports();
+
+    // Na Vercel (sem servidor WebSocket dedicado), não tenta abrir ws local na CDN
+    const isStaticDeploy = typeof window !== 'undefined' && (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('github.io'));
+    if (!customUrl && isStaticDeploy) {
+      const msg = 'Multiplayer online na Vercel opera via WebRTC P2P (PeerJS).';
+      this.setStatus(msg, false);
+      return Promise.reject(new Error(msg));
+    }
 
     this.transport = 'websocket';
     this.setConnectionStatus('connecting');
