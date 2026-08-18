@@ -448,7 +448,7 @@ export function updateCarMesh(
 
   // Inclinação dinâmica (Lean) para a moto nas curvas
   if (car.isMotorcycle) {
-    const targetLean = steerInput * 0.55;
+    const targetLean = -steerInput * 0.55;
     car.root.rotation.z = THREE.MathUtils.lerp(car.root.rotation.z, targetLean, Math.min(1, dt * 14));
   } else {
     car.root.rotation.z = 0;
@@ -465,7 +465,7 @@ export function updateCarMesh(
   if (car.rearRightWheel.children[0]) car.rearRightWheel.children[0].rotation.x += wheelRotationDelta;
 
   // Esterçamento das rodas dianteiras
-  const steerAngle = steerInput * 0.45;
+  const steerAngle = -steerInput * 0.45;
   car.frontLeftWheel.rotation.y = steerAngle;
   car.frontRightWheel.rotation.y = steerAngle;
 
