@@ -1,0 +1,25 @@
+{
+  "name": "projeto_dione",
+  "version": "1.0.0",
+  "description": "Top Gear: Legado - vertical slice web (Vite + Three.js + TypeScript)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "test": "vitest run",
+    "preview": "vite preview --host"
+  },
+  "devDependencies": {
+    "@fnnm/specite": "^0.1.2",
+    "@types/three": "^0.185.4",
+    "@types/ws": "^8.18.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "peerjs": "^1.5.5",
+    "three": "^0.185.1",
+    "ws": "^8.21.3"
+  }
+}

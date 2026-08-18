@@ -1,0 +1,401 @@
+import * as THREE from 'three';
+import { buildTrack, DEFAULT_TRACK_DEFINITION, getTrackDefinition, type Track, type TrackDefinition } from './track';
+import { RaceManager, type RaceMode } from './race';
+import { TimeAttackManager } from './race/timeattack';
+import { HUD, InputManager, Minimap, ResultsScreen } from './gameplay';
+import { AuthGate, MenuSystem, type MenuStartOptions } from './ui';
+import { soundSystem } from './audio';
+import {
+  ChaseCamera,
+  createCarMesh,
+  createPitMeshInstance,
+  createScene,
+  createTrackMesh,
+  GameLoop,
+  ParticleSystem,
+  SkidmarkManager,
+  updateCarMesh,
+  updatePitGlow,
+  updateSceneTheme,
+  type CarMeshInstance,
+  type PitMeshInstance,
+} from './render';
+
+const app: HTMLDivElement = document.querySelector<HTMLDivElement>('#app')!;
+if (!app) {
+  throw new Error('Elemento #app não encontrado');
+}
+
+// 1. Inicializa Cena 3D Three.js
+const sceneCtx = createScene(app);
+const { scene, renderer } = sceneCtx;
+
+// 2. Estado de Pista Atual, Pit Lane, Partículas e Marcas de Pneu
+let currentTrackDef: TrackDefinition = DEFAULT_TRACK_DEFINITION;
+let track: Track = buildTrack(currentTrackDef);
+let trackMesh = createTrackMesh(track);
+let pitInstance: PitMeshInstance = createPitMeshInstance(track);
+const particleSystem = new ParticleSystem();
+const skidmarkManager = new SkidmarkManager();
+
+scene.add(trackMesh);
+scene.add(pitInstance.group);
+scene.add(particleSystem.group);
+scene.add(skidmarkManager.mesh);
+
+// 3. Gerenciadores de Sessão
+const timeAttackManager = new TimeAttackManager();
+let raceManager = new RaceManager(track, {
+  mode: 'race',
+  totalLaps: 3,
+  difficulty: 'pro',
+  playerCarId: 'cannibal',
+  aiCount: 3,
+});
+
+// 4. Câmera, HUD, Minimapa e Resultados
+const chaseCamera = new ChaseCamera();
+const hud = new HUD(app);
+const resultsScreen = new ResultsScreen(app);
+const minimapMountEl = (hud.overlay.querySelector<HTMLDivElement>('#hud-minimap-mount') as HTMLElement) ?? app;
+let minimap: Minimap = new Minimap(
+  minimapMountEl,
+  track,
+  140,
+  100
+);
+
+// Instâncias visuais 3D para todos os pilotos (Jogador + IAs)
+let carMeshMap = new Map<string, CarMeshInstance>();
+let previousPlayerPositions: Map<string, { x: number; z: number }> = new Map();
+
+function rebuildSceneTrack(newTrackDef: TrackDefinition): void {
+  if (newTrackDef.id === currentTrackDef.id && track) return;
+
+  currentTrackDef = newTrackDef;
+  scene.remove(trackMesh);
+  scene.remove(pitInstance.group);
+
+  track = buildTrack(currentTrackDef);
+  trackMesh = createTrackMesh(track);
+  pitInstance = createPitMeshInstance(track);
+
+  scene.add(trackMesh);
+  scene.add(pitInstance.group);
+
+  if (currentTrackDef.theme) {
+    updateSceneTheme(sceneCtx, currentTrackDef.theme);
+  }
+
+  // Recria o minimapa com o novo circuito
+  if (minimap) {
+    minimap.destroy();
+    const mount: HTMLElement = hud.overlay.querySelector<HTMLDivElement>('#hud-minimap-mount') ?? app;
+    minimap = new Minimap(mount, track, 140, 100);
+  }
+}
+
+function rebuildCarMeshes(): void {
+  carMeshMap.forEach((inst) => scene.remove(inst.root));
+  carMeshMap.clear();
+  previousPlayerPositions.clear();
+
+  for (const racer of raceManager.racers) {
+    const meshInst = createCarMesh(racer.stats);
+    scene.add(meshInst.root);
+    carMeshMap.set(racer.id, meshInst);
+    previousPlayerPositions.set(racer.id, { x: racer.state.x, z: racer.state.y });
+  }
+}
+
+rebuildCarMeshes();
+
+
+// Overlay de Contagem Regressiva (3-2-1-GO!)
+const countdownEl = document.createElement('div');
+countdownEl.id = 'race-countdown-overlay';
+countdownEl.style.cssText = `
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Courier New', monospace, sans-serif;
+  font-size: 84px;
+  font-weight: 900;
+  color: #f1c40f;
+  text-shadow: 0 0 25px rgba(241, 196, 15, 0.9), 4px 4px 0 #e74c3c;
+  pointer-events: none;
+  z-index: 500;
+  display: none;
+`;
+app.appendChild(countdownEl);
+
+let lastCountdownVal: string | null = null;
+let isResultsShown = false;
+let isGameActive = false;
+let wasInSlipstream = false;
+let lastPlayerLap = 1;
+
+// 5. Gerenciador de Entrada
+const inputManager = new InputManager((code) => {
+  if (code === 'KeyM') {
+    soundSystem.toggleMute();
+  }
+  if (code === 'Escape' && isGameActive && !menuSystem) {
+    showMenu();
+  }
+});
+
+// 6. Configuração do Menu Principal
+let currentStartOptions: MenuStartOptions = {
+  mode: 'race',
+  carId: 'cannibal',
+  trackId: 'las_vegas',
+  difficulty: 'pro',
+  trackDefinition: DEFAULT_TRACK_DEFINITION,
+};
+
+const menuSystem: MenuSystem = new MenuSystem(app, (options) => {
+  currentStartOptions = options;
+  startNewRace(options);
+});
+
+function startNewRace(options: MenuStartOptions): void {
+  soundSystem.init();
+
+  // Atualiza circuito se necessário
+  const trackDef = options.trackDefinition ?? (options.trackId ? getTrackDefinition(options.trackId) : DEFAULT_TRACK_DEFINITION);
+  rebuildSceneTrack(trackDef);
+
+  // Inicia música da pista correspondente (MP3)
+  if (trackDef.musicUrl) {
+    soundSystem.playTrackMusic(trackDef.musicUrl);
+  }
+
+  if (options.mode === 'multiplayer' && options.multiplayerClient && options.networkPlayers) {
+    const mpPlayers = options.networkPlayers.map((p, idx) => ({
+      id: p.id,
+      name: p.name,
+      carId: p.carId,
+      isLocal: p.id === options.multiplayerClient!.playerId,
+      slot: idx,
+    }));
+
+    raceManager = new RaceManager(track, {
+      mode: 'multiplayer',
+      totalLaps: 3,
+      difficulty: options.difficulty,
+      playerCarId: options.carId,
+      aiCount: 0,
+      multiplayerPlayers: mpPlayers,
+    });
+
+    options.multiplayerClient.onWorldSyncCallback = (states) => {
+      for (const st of states) {
+        if (st.id === options.multiplayerClient!.playerId) continue;
+        const remoteRacer = raceManager.racers.find((r) => r.id === st.id);
+        if (remoteRacer) {
+          remoteRacer.state.x = THREE.MathUtils.lerp(remoteRacer.state.x, st.state.x, 0.45);
+          remoteRacer.state.y = THREE.MathUtils.lerp(remoteRacer.state.y, st.state.y, 0.45);
+          remoteRacer.state.angle = st.state.angle;
+          remoteRacer.state.speed = st.state.speed;
+          remoteRacer.state.nitroTimer = st.nitroActive ? 1.0 : 0;
+          remoteRacer.state.surface = st.state.surface;
+        }
+      }
+    };
+  } else {
+    raceManager = new RaceManager(track, {
+      mode: options.mode as RaceMode,
+      totalLaps: 3,
+      difficulty: options.difficulty,
+      playerCarId: options.carId,
+      aiCount: options.mode === 'timeattack' ? 0 : 3,
+    });
+  }
+
+  rebuildCarMeshes();
+  resultsScreen.hide();
+  isResultsShown = false;
+  isGameActive = true;
+  lastCountdownVal = null;
+  wasInSlipstream = false;
+  lastPlayerLap = 1;
+}
+
+function showMenu(): void {
+  isGameActive = false;
+  resultsScreen.hide();
+  soundSystem.playMenuMusic();
+  menuSystem.show();
+}
+
+// 7. Loop de Jogo Principal
+const gameLoop = new GameLoop(
+  // Atualização de Física (60 Hz)
+  (fixedDt) => {
+    if (!isGameActive) return;
+
+    const input = inputManager.getInput();
+    const wasNitroActive = raceManager.player.nitroSystem.isActive;
+
+    raceManager.update(input, fixedDt);
+
+    // Envio de estado no modo multiplayer LAN
+    if (currentStartOptions.mode === 'multiplayer' && currentStartOptions.multiplayerClient) {
+      currentStartOptions.multiplayerClient.sendState(
+        raceManager.player.state,
+        raceManager.player.lapTracker.currentLap,
+        raceManager.player.lapTracker.lapProgress,
+        raceManager.player.nitroSystem.isActive,
+        input.steer
+      );
+    }
+
+    // Efeito sonoro de nitro
+    if (!wasNitroActive && raceManager.player.nitroSystem.isActive) {
+      soundSystem.playNitro();
+      soundSystem.playBackfire();
+    }
+
+    // Efeito sonoro e faíscas de colisão
+    if (raceManager.lastCollisionImpulse > 0.3) {
+      soundSystem.playCollision(raceManager.lastCollisionImpulse);
+      particleSystem.emitSparks(
+        raceManager.player.state.x,
+        0.45,
+        raceManager.player.state.y,
+        Math.min(18, Math.round(raceManager.lastCollisionImpulse * 5))
+      );
+    }
+
+    // Efeito sonoro de Vácuo (Slipstream)
+    if (raceManager.isPlayerInSlipstream && !wasInSlipstream) {
+      soundSystem.playSlipstream();
+    }
+    wasInSlipstream = raceManager.isPlayerInSlipstream;
+
+    // Torcida comemora a cada nova volta
+    if (raceManager.player.lapTracker.currentLap > lastPlayerLap) {
+      lastPlayerLap = raceManager.player.lapTracker.currentLap;
+      soundSystem.playCrowdCheer();
+    }
+
+    // Beeps de contagem regressiva
+    const currentCd = raceManager.countdownDisplay;
+    if (currentCd && currentCd !== lastCountdownVal) {
+      lastCountdownVal = currentCd;
+      countdownEl.textContent = currentCd;
+      countdownEl.style.display = 'block';
+      soundSystem.playCountdown(currentCd === 'GO!');
+    } else if (!currentCd && countdownEl.style.display !== 'none') {
+      countdownEl.style.display = 'none';
+    }
+
+    // Fim de prova do jogador
+    if (raceManager.status === 'finished' && !isResultsShown) {
+      isResultsShown = true;
+      soundSystem.playCrowdCheer();
+
+      if (raceManager.config.mode === 'timeattack' && raceManager.player.lapTracker.bestLapTime) {
+        timeAttackManager.saveLapTime(
+          track.definition.id,
+          raceManager.player.carId,
+          raceManager.player.lapTracker.bestLapTime
+        );
+      }
+
+      resultsScreen.show(
+        raceManager.getLeaderboard(),
+        () => startNewRace(currentStartOptions),
+        () => showMenu()
+      );
+    }
+  },
+
+  // Atualização Visual por Frame
+  (frameDt) => {
+    if (isGameActive) {
+      // Atualiza malhas 3D de todos os carros e efeitos de pneu
+      for (const racer of raceManager.racers) {
+        const meshInst = carMeshMap.get(racer.id);
+        if (meshInst) {
+          const steer = racer.isPlayer ? inputManager.getInput().steer : 0;
+          updateCarMesh(meshInst, racer.state, steer, frameDt);
+
+          const prevPos = previousPlayerPositions.get(racer.id);
+          const isDrifting = Math.abs(racer.state.lateralVelocity) > 3.0 && Math.abs(racer.state.speed) > 15;
+          const isOffTrack = racer.state.surface === 'grass';
+
+          // Emite fumaça de pneu / poeira
+          if (isDrifting || isOffTrack) {
+            particleSystem.emitTireSmoke(racer.state.x, 0.1, racer.state.y, isOffTrack);
+          }
+
+          // Adiciona marcas de pneu (Skidmarks) no asfalto durante drift
+          if (isDrifting && prevPos && racer.state.surface === 'asphalt') {
+            const nx = -Math.sin(racer.state.angle);
+            const nz = Math.cos(racer.state.angle);
+            skidmarkManager.addSkidmark(
+              prevPos.x,
+              prevPos.z,
+              racer.state.x,
+              racer.state.y,
+              nx,
+              nz,
+              0.4
+            );
+          }
+
+          if (prevPos) {
+            prevPos.x = racer.state.x;
+            prevPos.z = racer.state.y;
+          }
+        }
+      }
+
+      // Atualiza câmera no carro do jogador
+      chaseCamera.update(raceManager.player.state, raceManager.player.stats, frameDt);
+
+      // Atualiza Partículas e Minimapa
+      particleSystem.update(frameDt);
+      minimap.update(raceManager.racers);
+
+      // Atualiza HUD
+      hud.update({
+        vehicleState: raceManager.player.state,
+        carStats: raceManager.player.stats,
+        fuel: raceManager.player.fuelSystem.getState(),
+        nitro: raceManager.player.nitroSystem.getState(),
+        lap: raceManager.player.lapTracker,
+        position: raceManager.player.currentRank,
+        totalRacers: raceManager.racers.length,
+        surface: raceManager.player.state.surface,
+        inSlipstream: raceManager.isPlayerInSlipstream,
+      });
+
+      // Atualiza sons de motor e derrapagem
+      const isThrottle = inputManager.getInput().throttle > 0;
+      soundSystem.updateEngine(
+        raceManager.player.state.speed,
+        raceManager.player.stats.topSpeed,
+        isThrottle
+      );
+      soundSystem.updateSkid(raceManager.player.state.lateralVelocity);
+    }
+
+    updatePitGlow(pitInstance, performance.now() / 1000);
+    renderer.render(scene, chaseCamera.camera);
+  }
+);
+
+gameLoop.start();
+
+// 8. Inicialização com Proteção de Senha (Vercel Gatekeeper)
+if (AuthGate.isUnlocked()) {
+  showMenu();
+} else {
+  new AuthGate(app, () => {
+    showMenu();
+  });
+}
