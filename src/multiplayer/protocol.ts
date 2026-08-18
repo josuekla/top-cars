@@ -66,6 +66,30 @@ export function deserializeMessage<T = ClientMessage | ServerMessage>(raw: unkno
       return null;
     }
   }
+  if (typeof ArrayBuffer !== 'undefined' && raw instanceof ArrayBuffer) {
+    try {
+      const decoder = new TextDecoder('utf-8');
+      const text = decoder.decode(raw);
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+        return parsed as T;
+      }
+    } catch {
+      return null;
+    }
+  }
+  if (typeof Uint8Array !== 'undefined' && raw instanceof Uint8Array) {
+    try {
+      const decoder = new TextDecoder('utf-8');
+      const text = decoder.decode(raw);
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+        return parsed as T;
+      }
+    } catch {
+      return null;
+    }
+  }
   return null;
 }
 

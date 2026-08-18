@@ -34,7 +34,18 @@ export const PEER_PREFIX = 'tglegado-';
 export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+  { urls: 'stun:stun.relay.metered.ca:80' },
 ];
+
+export interface NetworkDiagnosticsInfo {
+  iceState: string;
+  dataChannel: string;
+  peersCount: number;
+  lastRtt?: number;
+}
 
 export class MultiplayerClient {
   public transport: MultiplayerTransport = 'webrtc';
@@ -44,6 +55,13 @@ export class MultiplayerClient {
   public connectionStatus: ConnectionStatus = 'disconnected';
   public roomCode: string | null = null;
   public statusMessage: string = 'Desconectado';
+
+  // Diagnóstico de Conexão WebRTC
+  public diagnostics: NetworkDiagnosticsInfo = {
+    iceState: 'idle',
+    dataChannel: 'fechado',
+    peersCount: 0,
+  };
 
   // Motor de interpolação e predição (Dead Reckoning + LERP 60 FPS)
   public interpolator: NetworkStateInterpolator = new NetworkStateInterpolator();
@@ -59,6 +77,7 @@ export class MultiplayerClient {
   public onPlayerFinishedCallback?: (playerId: string, rank: number, totalTime: number) => void;
   public onStatusChangeCallback?: (msg: string, isError: boolean) => void;
   public onConnectionStatusChangeCallback?: (status: ConnectionStatus) => void;
+  public onDiagnosticsUpdateCallback?: (diag: NetworkDiagnosticsInfo) => void;
 
   // Estados Internos do WebRTC (PeerJS)
   private peer: Peer | null = null;

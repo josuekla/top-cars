@@ -75,6 +75,7 @@ export class RaceManager {
       difficulty: config.difficulty ?? 'pro',
       playerCarId: config.playerCarId ?? 'cannibal',
       aiCount: config.aiCount ?? (config.mode === 'timeattack' ? 0 : 3),
+      multiplayerPlayers: config.multiplayerPlayers,
     };
 
     this.player = this.createRacer('player', 'JOGADOR', true, this.config.playerCarId, 0, 0);
