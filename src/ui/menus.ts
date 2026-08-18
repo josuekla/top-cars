@@ -49,18 +49,15 @@ export class MenuSystem {
     this.init3DShowcase();
     this.setupMultiplayerListeners();
     window.addEventListener('keydown', this.handleKeyDown);
-
-    // Auto-join via URL se houver parâmetro ?room= ou ?join=
-    this.checkUrlForRoomJoin();
   }
 
-  private checkUrlForRoomJoin(): void {
+  public checkUrlForRoomJoin(): boolean {
     const roomCode = MultiplayerClient.parseRoomFromUrl();
     if (roomCode) {
-      setTimeout(() => {
-        this.joinRoomByCode(roomCode);
-      }, 200);
+      this.joinRoomByCode(roomCode);
+      return true;
     }
+    return false;
   }
 
   private setupLayout(): void {
@@ -999,6 +996,16 @@ export class MenuSystem {
         this.updateCarDisplay();
         soundSystem.playBeep(620);
       }
+    } else if (this.currentTab === 'multiplayer') {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+        this.selectedCarIndex = (this.selectedCarIndex - 1 + ALL_CARS.length) % ALL_CARS.length;
+        this.updateCarDisplay();
+        soundSystem.playBeep(620);
+      } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+        this.selectedCarIndex = (this.selectedCarIndex + 1) % ALL_CARS.length;
+        this.updateCarDisplay();
+        soundSystem.playBeep(620);
+      }
     }
   };
 
@@ -1020,7 +1027,13 @@ export class MenuSystem {
   public show(): void {
     this.isVisible = true;
     this.overlay.style.display = 'flex';
-    this.setTab('main');
+    const roomCode = MultiplayerClient.parseRoomFromUrl();
+    if (roomCode) {
+      this.setTab('multiplayer');
+      this.joinRoomByCode(roomCode);
+    } else {
+      this.setTab('main');
+    }
     if (this.carShowcase) {
       this.carShowcase.start();
     }

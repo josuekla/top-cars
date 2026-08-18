@@ -204,7 +204,7 @@ function startNewRace(options: MenuStartOptions): void {
     const isHost = options.multiplayerClient.isHost;
 
     const mpPlayers = options.networkPlayers.map((p, idx) => {
-      const isLocal = p.id === localId || (isHost && p.isHost) || (!isHost && !p.isHost && options.networkPlayers!.length === 2);
+      const isLocal = localId ? p.id === localId : (isHost ? p.isHost : !p.isHost);
       return {
         id: p.id,
         name: p.name,
