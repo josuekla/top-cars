@@ -360,7 +360,7 @@ describe('MultiplayerClient Core Architecture', () => {
       ],
     });
 
-    const interpolated = client.getInterpolatedState('remote_opponent', 1000);
+    const interpolated = client.getInterpolatedState('remote_opponent');
     expect(interpolated).not.toBeNull();
     expect(interpolated!.state.x).toBe(50);
     expect(interpolated!.state.y).toBe(100);

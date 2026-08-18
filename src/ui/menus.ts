@@ -706,7 +706,7 @@ export class MenuSystem {
     if (listEl) {
       listEl.innerHTML = players
         .map((p) => {
-          const isMe = p.id === this.mpClient.playerId;
+          const isMe = p.id === this.mpClient.playerId || (this.mpClient.isHost && p.isHost) || (!this.mpClient.isHost && !p.isHost);
           const statusText = p.ready ? '🟢 PRONTO' : '🟡 AGUARDANDO...';
           return `
             <div class="player-row" style="${isMe ? 'border-color: #00d2ff;' : ''}">
@@ -874,6 +874,10 @@ export class MenuSystem {
     const btnMpStart = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-start');
     if (btnMpStart) {
       btnMpStart.onclick = () => {
+        if (this.networkPlayers.length < 2) {
+          alert('Aguarde seu amigo entrar na sala e ficar PRONTO antes de iniciar a largada!');
+          return;
+        }
         const track = ALL_TRACKS[this.selectedTrackIndex] || ALL_TRACKS[0];
         this.mpClient.startRace(track.id);
       };

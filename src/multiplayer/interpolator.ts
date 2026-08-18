@@ -49,7 +49,6 @@ export class NetworkStateInterpolator {
    */
   public pushSnapshot(playerId: string, playerState: NetworkPlayerState, localTime?: number): void {
     const now = localTime !== undefined ? localTime : (typeof performance !== 'undefined' ? performance.now() : Date.now());
-    const timestamp = playerState.timestamp > 0 ? playerState.timestamp : now;
 
     let playerBuffer = this.buffers.get(playerId);
     if (!playerBuffer) {
@@ -63,21 +62,16 @@ export class NetworkStateInterpolator {
       progress: playerState.progress,
       nitroActive: playerState.nitroActive,
       steer: playerState.steer,
-      timestamp,
+      timestamp: localTime !== undefined ? localTime : now,
       receivedAt: now,
     };
 
     // Insere mantendo a ordenação temporal
-    const insertIdx = playerBuffer.findIndex((s) => s.timestamp > timestamp);
-    if (insertIdx === -1) {
-      playerBuffer.push(snapshot);
-    } else {
-      playerBuffer.splice(insertIdx, 0, snapshot);
-    }
+    playerBuffer.push(snapshot);
 
     // Limita o tamanho do buffer para evitar consumo excessivo de memória
     if (playerBuffer.length > this.maxBufferSize) {
-      playerBuffer.splice(0, playerBuffer.length - this.maxBufferSize);
+      playerBuffer.shift();
     }
   }
 

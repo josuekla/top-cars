@@ -200,13 +200,19 @@ function startNewRace(options: MenuStartOptions): void {
   }
 
   if (options.mode === 'multiplayer' && options.multiplayerClient && options.networkPlayers) {
-    const mpPlayers = options.networkPlayers.map((p, idx) => ({
-      id: p.id,
-      name: p.name,
-      carId: p.carId,
-      isLocal: p.id === options.multiplayerClient!.playerId,
-      slot: idx,
-    }));
+    const localId = options.multiplayerClient.playerId;
+    const isHost = options.multiplayerClient.isHost;
+
+    const mpPlayers = options.networkPlayers.map((p, idx) => {
+      const isLocal = p.id === localId || (isHost && p.isHost) || (!isHost && !p.isHost && options.networkPlayers!.length === 2);
+      return {
+        id: p.id,
+        name: p.name,
+        carId: p.carId,
+        isLocal,
+        slot: idx,
+      };
+    });
 
     raceManager = new RaceManager(track, {
       mode: 'multiplayer',
