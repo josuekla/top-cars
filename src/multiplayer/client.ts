@@ -114,6 +114,13 @@ export class MultiplayerClient {
     }
   }
 
+  public updateDiagnostics(partial: Partial<NetworkDiagnosticsInfo>): void {
+    this.diagnostics = { ...this.diagnostics, ...partial };
+    if (this.onDiagnosticsUpdateCallback) {
+      this.onDiagnosticsUpdateCallback(this.diagnostics);
+    }
+  }
+
   public setStatus(msg: string, isError: boolean = false): void {
     this.statusMessage = msg;
     if (this.onStatusChangeCallback) {
@@ -165,6 +172,11 @@ export class MultiplayerClient {
     this.lastSessionName = name;
     this.lastSessionCarId = carId;
     this.setConnectionStatus('connecting');
+    this.updateDiagnostics({
+      iceState: 'conectando STUN/broker...',
+      dataChannel: 'aguardando peer',
+      peersCount: 1,
+    });
     this.setStatus('Conectando aos servidores STUN/broker WebRTC...');
 
     return new Promise((resolve, reject) => {
@@ -179,7 +191,8 @@ export class MultiplayerClient {
           },
         });
 
-        this.peer.on('open', () => {
+        this.peer.on('open', (id) => {
+          console.log(`[WebRTC Multiplayer Host] Peer aberto com sucesso. ID Broker: ${id}, Sala: ${code}`);
           this.setConnectionStatus('connected');
           this.backoff.reset();
           this.playerId = `host_${Math.random().toString(36).substring(2, 7)}`;
@@ -193,7 +206,13 @@ export class MultiplayerClient {
             slot: 0,
           };
 
-          this.setStatus(`Sala online criada: ${code} (Aguardando amigos)`);
+          this.updateDiagnostics({
+            iceState: 'online (host pronto)',
+            dataChannel: 'aguardando oponente',
+            peersCount: 1,
+          });
+
+          this.setStatus(`Sala online criada: ${code} (Aguardando desafiante...)`);
           this.triggerLobbyUpdate();
           resolve(code);
         });
@@ -208,6 +227,7 @@ export class MultiplayerClient {
             ? `O código de sala ${code} já está em uso. Tente outro código.`
             : `Erro no WebRTC: ${err.message || err.type}`;
 
+          this.updateDiagnostics({ iceState: 'erro' });
           this.setStatus(errorMsg, true);
           if (this.connectionStatus === 'connecting') {
             this.setConnectionStatus('failed');
@@ -219,6 +239,7 @@ export class MultiplayerClient {
         });
 
         this.peer.on('disconnected', () => {
+          console.warn('[WebRTC Multiplayer Host] Broker desconectado. Tentando reconectar...');
           this.setStatus('Sinalização WebRTC desconectada. Tentando reconectar broker...');
           if (!this.isManualDisconnect && this.peer && !this.peer.destroyed) {
             this.peer.reconnect();
@@ -226,6 +247,7 @@ export class MultiplayerClient {
         });
 
         this.peer.on('close', () => {
+          console.log('[WebRTC Multiplayer Host] Peer fechado.');
           if (!this.isManualDisconnect) {
             this.handleUnexpectedDisconnection();
           }
@@ -256,6 +278,11 @@ export class MultiplayerClient {
     const hostPeerId = `${PEER_PREFIX}${cleanCode.toLowerCase()}`;
 
     this.setConnectionStatus('connecting');
+    this.updateDiagnostics({
+      iceState: 'buscando sala STUN...',
+      dataChannel: 'conectando...',
+      peersCount: 1,
+    });
     this.setStatus(`Buscando sala ${cleanCode} via WebRTC STUN...`);
 
     return new Promise((resolve, reject) => {
@@ -273,12 +300,19 @@ export class MultiplayerClient {
             const timeoutMsg = `Tempo limite ao conectar à sala ${cleanCode}. Verifique se o Host está online.`;
             this.setStatus(timeoutMsg, true);
             this.setConnectionStatus('failed');
+            this.updateDiagnostics({ iceState: 'timeout' });
             this.cleanupTransports();
             reject(new Error(timeoutMsg));
           }
         }, 14000);
 
-        this.peer.on('open', () => {
+        this.peer.on('open', (id) => {
+          console.log(`[WebRTC Multiplayer Guest] Peer criado com ID ${id}. Conectando ao Host ${hostPeerId}...`);
+          this.updateDiagnostics({
+            iceState: 'conectando ao host...',
+            dataChannel: 'abrindo DataChannel...',
+          });
+
           const conn = this.peer!.connect(hostPeerId, {
             reliable: true,
           });
@@ -290,6 +324,12 @@ export class MultiplayerClient {
             isResolved = true;
             this.setConnectionStatus('connected');
             this.backoff.reset();
+            this.updateDiagnostics({
+              iceState: 'conectado',
+              dataChannel: 'aberto (P2P ativo)',
+              peersCount: 2,
+            });
+            console.log(`[WebRTC Multiplayer Guest] DataChannel aberto com Host (${hostPeerId}). Enviando join_lobby: nome=${name}, carro=${carId}`);
             this.setStatus(`Conectado à sala ${cleanCode}!`);
             this.send({ type: 'join_lobby', name, carId, roomCode: cleanCode });
             resolve();
@@ -306,6 +346,8 @@ export class MultiplayerClient {
           });
 
           conn.on('close', () => {
+            console.warn('[WebRTC Multiplayer Guest] Conexão com o Host encerrada.');
+            this.updateDiagnostics({ dataChannel: 'fechado', iceState: 'desconectado' });
             this.setStatus('Conexão com o Host encerrada.', true);
             if (!this.isManualDisconnect) {
               this.handleUnexpectedDisconnection();
@@ -315,6 +357,7 @@ export class MultiplayerClient {
           conn.on('error', (err) => {
             clearTimeout(connectionTimeout);
             console.error('[WebRTC Guest Connection Error]', err);
+            this.updateDiagnostics({ dataChannel: 'erro', iceState: 'falha' });
             this.setStatus('Erro na comunicação com o Host da sala.', true);
             if (!isResolved) {
               this.setConnectionStatus('failed');
@@ -330,6 +373,7 @@ export class MultiplayerClient {
             ? `Sala "${cleanCode}" não encontrada. Verifique o código com o Host.`
             : `Erro WebRTC: ${err.message || err.type}`;
 
+          this.updateDiagnostics({ iceState: 'erro peer' });
           this.setStatus(errorMsg, true);
           if (!isResolved) {
             this.setConnectionStatus('failed');
@@ -341,6 +385,7 @@ export class MultiplayerClient {
         });
 
         this.peer.on('disconnected', () => {
+          console.warn('[WebRTC Multiplayer Guest] Broker desconectado. Tentando reconectar...');
           if (!this.isManualDisconnect && this.peer && !this.peer.destroyed) {
             this.peer.reconnect();
           }
@@ -359,9 +404,11 @@ export class MultiplayerClient {
   private handleIncomingPeerConnection(conn: DataConnection): void {
     const peerPlayerId = `player_${this.hostPeers.size + 2}_${Math.random().toString(36).substring(2, 6)}`;
 
+    console.log(`[WebRTC Multiplayer Host] Nova conexão P2P recebida de ${conn.peer}. Criando jogador ${peerPlayerId}`);
+
     const peerInfo: NetworkPlayerInfo = {
       id: peerPlayerId,
-      name: `Piloto ${this.hostPeers.size + 2}`,
+      name: 'Piloto Desafiante',
       carId: 'sidewinder',
       ready: false,
       isHost: false,
@@ -374,8 +421,19 @@ export class MultiplayerClient {
     };
 
     this.hostPeers.set(peerPlayerId, connectedPeer);
+    this.updateDiagnostics({
+      peersCount: this.getAllNetworkPlayers().length,
+      dataChannel: 'conectando peer...',
+    });
 
     const onHostOpen = () => {
+      console.log(`[WebRTC Multiplayer Host] DataChannel aberto com ${conn.peer} (${peerPlayerId}). Enviando welcome e lobby_update.`);
+      this.updateDiagnostics({
+        dataChannel: 'aberto (P2P ativo)',
+        iceState: 'conectado',
+        peersCount: this.getAllNetworkPlayers().length,
+      });
+
       // Envia boas-vindas com ID e código da sala
       conn.send({
         type: 'welcome',
@@ -400,10 +458,12 @@ export class MultiplayerClient {
         if (!msg) return;
 
         if (msg.type === 'join_lobby') {
+          console.log(`[WebRTC Multiplayer Host] join_lobby recebido de ${peerPlayerId}: ${msg.name} - ${msg.carId}`);
           connectedPeer.info.name = msg.name || connectedPeer.info.name;
           connectedPeer.info.carId = msg.carId || connectedPeer.info.carId;
           this.triggerLobbyUpdate();
         } else if (msg.type === 'set_ready') {
+          console.log(`[WebRTC Multiplayer Host] set_ready recebido de ${peerPlayerId}: ready=${msg.ready}, carId=${msg.carId}`);
           connectedPeer.info.ready = msg.ready;
           connectedPeer.info.carId = msg.carId;
           this.triggerLobbyUpdate();
@@ -457,10 +517,14 @@ export class MultiplayerClient {
     });
 
     conn.on('close', () => {
+      console.log(`[WebRTC Multiplayer Host] DataConnection fechada para ${peerPlayerId}`);
       this.hostPeers.delete(peerPlayerId);
       this.interpolator.removePlayer(peerPlayerId);
       this.broadcastServerMessage({ type: 'player_disconnected', playerId: peerPlayerId });
       this.triggerLobbyUpdate();
+      this.updateDiagnostics({
+        peersCount: this.getAllNetworkPlayers().length,
+      });
       this.setStatus(`Piloto desconectou da sala.`);
     });
   }

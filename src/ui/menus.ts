@@ -30,6 +30,8 @@ export class MenuSystem {
   private isVisible: boolean = false;
   private currentTab: MenuTab = 'main';
 
+  private playerName: string = 'Piloto';
+
   private carShowcase: CarShowcase | null = null;
   private canvasElement: HTMLCanvasElement | null = null;
 
@@ -41,6 +43,14 @@ export class MenuSystem {
   constructor(container: HTMLElement, onStart?: (options: MenuStartOptions) => void) {
     this.container = container;
     this.onStartCallback = onStart;
+
+    if (typeof localStorage !== 'undefined') {
+      const savedName = localStorage.getItem('topgear_player_name');
+      if (savedName && savedName.trim()) {
+        this.playerName = savedName.trim();
+      }
+    }
+
     this.overlay = document.createElement('div');
     this.overlay.id = 'retro-menu-overlay';
     this.setupLayout();
@@ -66,65 +76,56 @@ export class MenuSystem {
         #retro-menu-overlay {
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at center, rgba(20, 24, 48, 0.96), rgba(6, 8, 16, 0.99));
-          backdrop-filter: blur(8px);
+          background: radial-gradient(ellipse at 50% 30%, rgba(18, 24, 42, 0.96) 0%, rgba(8, 11, 20, 0.98) 100%);
+          backdrop-filter: blur(16px);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          font-family: 'Courier New', monospace, sans-serif;
-          color: #fff;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+          color: #f8fafc;
           z-index: 999;
           user-select: none;
-          overflow: hidden;
-        }
-
-        #retro-menu-overlay::before {
-          content: " ";
-          display: block;
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-          background-size: 100% 4px;
-          z-index: 1000;
-          pointer-events: none;
-          opacity: 0.7;
+          overflow-y: auto;
+          padding: 20px 16px;
         }
 
         .menu-title-box {
           text-align: center;
-          margin-bottom: 12px;
+          margin-bottom: 14px;
           position: relative;
         }
 
         .retro-main-title {
-          font-size: 44px;
+          font-family: 'Courier New', monospace, sans-serif;
+          font-size: 38px;
           font-weight: 900;
-          letter-spacing: 5px;
+          letter-spacing: 4px;
           color: #f1c40f;
-          text-shadow: 0 0 16px rgba(241, 196, 15, 0.8), 4px 4px 0 #c0392b, 6px 6px 0 #111;
+          text-shadow: 0 0 20px rgba(241, 196, 15, 0.4);
           margin: 0;
         }
 
         .retro-sub-title {
-          font-size: 12px;
+          font-size: 11px;
           letter-spacing: 3px;
-          color: #00ffff;
+          color: #38bdf8;
           margin-top: 4px;
           text-transform: uppercase;
-          text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+          font-weight: 700;
         }
 
         .menu-card {
-          background: #111728;
-          border: 3px solid #2f3e69;
-          border-radius: 12px;
-          padding: 20px 28px;
-          width: 92%;
-          max-width: 820px;
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(0, 210, 255, 0.05);
+          background: rgba(15, 23, 42, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 16px;
+          padding: 22px 28px;
+          width: 94%;
+          max-width: 840px;
+          box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
           position: relative;
           z-index: 1001;
+          backdrop-filter: blur(12px);
         }
 
         .menu-grid {
@@ -133,63 +134,88 @@ export class MenuSystem {
           gap: 20px;
         }
 
+        @media (max-width: 768px) {
+          .menu-grid {
+            grid-template-columns: 1fr;
+          }
+          .retro-main-title {
+            font-size: 28px;
+          }
+        }
+
         .menu-label {
           font-size: 11px;
           text-transform: uppercase;
-          letter-spacing: 1.5px;
-          color: #7b8fae;
+          letter-spacing: 1.2px;
+          color: #94a3b8;
           margin-bottom: 6px;
-          font-weight: bold;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .tab-group {
           display: flex;
-          gap: 8px;
+          gap: 6px;
         }
 
         .tab-btn {
           flex: 1;
-          background: #1b233a;
-          color: #bdc3c7;
-          border: 2px solid #2b395d;
-          border-radius: 6px;
-          padding: 8px 10px;
+          background: rgba(30, 41, 59, 0.6);
+          color: #cbd5e1;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          padding: 9px 12px;
           font-family: inherit;
           font-size: 12px;
-          font-weight: bold;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
           text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
         }
 
         .tab-btn:hover {
-          background: #273455;
+          background: rgba(51, 65, 85, 0.8);
           color: #fff;
-          border-color: #00ffff;
+          border-color: rgba(255, 255, 255, 0.2);
         }
 
         .tab-btn.active {
-          background: #e74c3c;
-          border-color: #f1c40f;
+          background: #ef4444;
+          border-color: #f87171;
           color: #fff;
-          box-shadow: 0 0 14px rgba(231, 76, 60, 0.6);
+          box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+        }
+
+        .tab-btn.tab-btn-mp {
+          border-color: rgba(56, 189, 248, 0.4);
+          color: #38bdf8;
+        }
+
+        .tab-btn.tab-btn-mp:hover {
+          background: rgba(56, 189, 248, 0.15);
+          border-color: #38bdf8;
         }
 
         .showcase-container {
-          background: radial-gradient(circle at center, #1b243b 0%, #0c101c 100%);
-          border: 2px solid #00d2ff;
-          border-radius: 8px;
+          background: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.9) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
           overflow: hidden;
           position: relative;
           display: flex;
           flex-direction: column;
           align-items: center;
-          box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
         }
 
         #menu-car-canvas {
           width: 100%;
-          height: 180px;
+          height: 170px;
           display: block;
         }
 
@@ -198,24 +224,52 @@ export class MenuSystem {
           width: 100%;
           justify-content: space-between;
           align-items: center;
-          padding: 6px 12px;
-          background: rgba(10, 14, 25, 0.8);
-          border-top: 1px solid #233152;
+          padding: 8px 12px;
+          background: rgba(10, 15, 29, 0.7);
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-arrow-btn {
+          background: rgba(30, 41, 59, 0.8);
+          color: #fff;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 6px;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          font-size: 14px;
+        }
+
+        .nav-arrow-btn:hover {
+          background: rgba(51, 65, 85, 1);
+          border-color: #38bdf8;
+          color: #38bdf8;
         }
 
         .car-name-badge {
-          font-size: 18px;
+          font-family: 'Courier New', monospace, sans-serif;
+          font-size: 17px;
           font-weight: 900;
           letter-spacing: 2px;
-          text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
         }
 
         .car-desc-text {
-          font-size: 10px;
-          color: #a4b0be;
+          font-size: 11px;
+          color: #94a3b8;
           text-align: center;
           margin-top: 2px;
-          font-style: italic;
+        }
+
+        .car-stats-card {
+          margin-top: 10px;
+          background: rgba(10, 15, 29, 0.6);
+          padding: 10px 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .car-stat-row {
@@ -223,109 +277,124 @@ export class MenuSystem {
           align-items: center;
           justify-content: space-between;
           font-size: 11px;
-          margin-bottom: 5px;
+          margin-bottom: 6px;
+          color: #cbd5e1;
+        }
+
+        .car-stat-row:last-child {
+          margin-bottom: 0;
         }
 
         .stat-bar-bg {
-          width: 58%;
-          height: 8px;
-          background: #14192b;
-          border-radius: 4px;
+          width: 55%;
+          height: 5px;
+          background: rgba(30, 41, 59, 0.8);
+          border-radius: 3px;
           overflow: hidden;
-          border: 1px solid #242f4c;
         }
 
         .stat-bar-fill {
           height: 100%;
-          background: #00d2ff;
-          box-shadow: 0 0 8px rgba(0, 210, 255, 0.5);
+          background: #38bdf8;
+          border-radius: 3px;
           transition: width 0.3s ease;
+        }
+
+        .track-selector-nav {
+          background: rgba(10, 15, 29, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          padding: 8px 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
         }
 
         .btn-start-race {
           width: 100%;
           margin-top: 14px;
-          background: linear-gradient(180deg, #2ecc71, #27ae60);
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           color: #fff;
           border: none;
-          padding: 14px;
+          padding: 13px 20px;
           font-family: inherit;
-          font-size: 16px;
-          font-weight: 900;
-          letter-spacing: 2px;
-          border-radius: 8px;
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: 1.5px;
+          border-radius: 10px;
           cursor: pointer;
-          box-shadow: 0 6px 18px rgba(46, 204, 113, 0.4);
-          transition: all 0.15s ease;
+          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
 
-        .btn-start-race:hover {
+        .btn-start-race:hover:not(:disabled) {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(46, 204, 113, 0.6);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+          background: linear-gradient(135deg, #34d399 0%, #059669 100%);
         }
 
         .btn-start-race:disabled {
-          background: #555;
+          background: rgba(51, 65, 85, 0.5);
           cursor: not-allowed;
           box-shadow: none;
           transform: none;
-          color: #888;
+          color: #64748b;
+          border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .menu-footer-nav {
           display: flex;
-          gap: 12px;
-          margin-top: 12px;
+          gap: 10px;
+          margin-top: 14px;
         }
 
         .btn-sub-nav {
           flex: 1;
-          background: #1e263d;
-          color: #8fa0c0;
-          border: 1px solid #33436d;
-          border-radius: 6px;
+          background: rgba(30, 41, 59, 0.4);
+          color: #94a3b8;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 8px;
           padding: 8px;
           font-family: inherit;
           font-size: 11px;
-          font-weight: bold;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.15s;
         }
 
         .btn-sub-nav:hover {
-          background: #2a375a;
+          background: rgba(51, 65, 85, 0.7);
           color: #f1c40f;
-          border-color: #f1c40f;
+          border-color: rgba(241, 196, 15, 0.4);
         }
 
         .sub-screen-card {
-          background: #0f1424;
-          border: 2px solid #00ffff;
-          border-radius: 10px;
-          padding: 24px;
-          max-height: 440px;
-          overflow-y: auto;
+          padding: 4px;
           line-height: 1.6;
         }
 
         .sub-screen-title {
-          font-size: 22px;
+          font-size: 20px;
           color: #f1c40f;
-          font-weight: bold;
+          font-weight: 800;
           margin-bottom: 14px;
           text-align: center;
-          text-transform: uppercase;
+          letter-spacing: 1px;
         }
 
         .btn-back-menu {
-          background: #e74c3c;
-          color: #fff;
-          border: none;
-          padding: 12px 24px;
+          background: rgba(30, 41, 59, 0.6);
+          color: #cbd5e1;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 10px 20px;
           font-family: inherit;
-          font-size: 14px;
-          font-weight: bold;
-          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          border-radius: 8px;
           cursor: pointer;
           margin-top: 16px;
           display: block;
@@ -334,20 +403,64 @@ export class MenuSystem {
         }
 
         .btn-back-menu:hover {
-          background: #c0392b;
-          box-shadow: 0 0 12px rgba(231, 76, 60, 0.6);
+          background: rgba(51, 65, 85, 0.9);
+          color: #fff;
+          border-color: rgba(255, 255, 255, 0.25);
         }
 
-        .lan-box {
-          background: #0a0e1c;
-          border: 1px solid #00d2ff;
-          border-radius: 6px;
-          padding: 10px;
-          margin-bottom: 12px;
+        /* MULTIPLAYER REDESIGN */
+        .mp-pilot-config-card {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          background: rgba(10, 15, 29, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 12px 14px;
+          margin-bottom: 14px;
+        }
+
+        @media (max-width: 600px) {
+          .mp-pilot-config-card {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .mp-input {
+          width: 100%;
+          background: rgba(15, 23, 42, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 8px 12px;
+          color: #38bdf8;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 600;
+          outline: none;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .mp-input:focus {
+          border-color: #38bdf8;
+          box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+        }
+
+        .mp-car-picker {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 10px;
+          background: rgba(15, 23, 42, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 4px 8px;
+          height: 38px;
+        }
+
+        .mp-car-badge {
+          font-family: 'Courier New', monospace, sans-serif;
+          font-weight: 900;
+          font-size: 13px;
+          letter-spacing: 1px;
         }
 
         .room-controls-row {
@@ -358,65 +471,200 @@ export class MenuSystem {
 
         .room-input {
           flex: 1;
-          background: #0c101c;
-          border: 2px solid #283759;
-          border-radius: 6px;
-          padding: 8px 12px;
-          color: #00ffff;
-          font-family: inherit;
+          background: rgba(15, 23, 42, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 9px 12px;
+          color: #f1c40f;
+          font-family: 'Courier New', monospace, sans-serif;
           font-size: 14px;
-          font-weight: bold;
+          font-weight: 900;
           text-transform: uppercase;
           letter-spacing: 2px;
           outline: none;
         }
 
         .room-input:focus {
-          border-color: #00d2ff;
-          box-shadow: 0 0 8px rgba(0, 210, 255, 0.4);
+          border-color: #f1c40f;
+          box-shadow: 0 0 10px rgba(241, 196, 15, 0.25);
         }
 
-        .status-badge {
-          display: inline-block;
-          padding: 3px 8px;
-          border-radius: 4px;
-          font-size: 10px;
-          font-weight: bold;
-          text-transform: uppercase;
-        }
-
-        .status-connected { background: #27ae60; color: #fff; }
-        .status-connecting { background: #f39c12; color: #fff; }
-        .status-reconnecting { background: #e67e22; color: #fff; }
-        .status-disconnected { background: #7f8c8d; color: #fff; }
-        .status-failed { background: #c0392b; color: #fff; }
-
-        .player-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #161e33;
-          border: 1px solid #27375e;
-          border-radius: 6px;
-          padding: 8px 12px;
-          margin-bottom: 8px;
-        }
-
-        .track-selector-nav {
-          background: #0c101c;
-          border: 2px solid #283759;
+        .btn-action-primary {
+          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+          color: #fff;
+          border: none;
           border-radius: 8px;
-          padding: 8px 10px;
+          padding: 9px 16px;
+          font-family: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .btn-action-primary:hover {
+          background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+        }
+
+        .btn-action-host {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .btn-action-host:hover {
+          background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
+
+        .room-active-card {
+          background: rgba(10, 15, 29, 0.7);
+          border: 1px solid rgba(56, 189, 248, 0.2);
+          border-radius: 10px;
+          padding: 10px 14px;
+          margin-bottom: 14px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+          gap: 12px;
+        }
+
+        .room-code-tag {
+          font-family: 'Courier New', monospace, sans-serif;
+          font-size: 16px;
+          font-weight: 900;
+          color: #f1c40f;
+          letter-spacing: 2px;
+        }
+
+        .status-dot {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          margin-right: 6px;
+        }
+
+        .status-dot.connected { background: #10b981; box-shadow: 0 0 6px #10b981; }
+        .status-dot.connecting { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+        .status-dot.disconnected { background: #64748b; }
+        .status-dot.failed { background: #ef4444; }
+
+        /* PILOT CARDS */
+        .pilots-list-container {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+
+        .pilot-card {
+          background: rgba(15, 23, 42, 0.75);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          padding: 10px 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          transition: all 0.2s ease;
+        }
+
+        .pilot-card.is-local {
+          border-color: rgba(56, 189, 248, 0.4);
+          background: rgba(14, 165, 233, 0.06);
+        }
+
+        .pilot-info-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .pilot-car-icon {
+          font-size: 18px;
+        }
+
+        .pilot-name-box {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .pilot-name-text {
+          font-size: 13px;
+          font-weight: 700;
+          color: #f8fafc;
+        }
+
+        .badge-tag {
+          font-size: 9px;
+          font-weight: 800;
+          padding: 2px 6px;
+          border-radius: 4px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .badge-you {
+          background: rgba(56, 189, 248, 0.2);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .badge-host {
+          background: rgba(241, 196, 15, 0.2);
+          color: #f1c40f;
+          border: 1px solid rgba(241, 196, 15, 0.3);
+        }
+
+        .badge-car-name {
+          font-family: 'Courier New', monospace, sans-serif;
+          font-size: 11px;
+          font-weight: 800;
+          padding: 2px 6px;
+          border-radius: 4px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .pilot-status-badge {
+          font-size: 11px;
+          font-weight: 800;
+          padding: 4px 10px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .pilot-status-badge.ready {
+          background: rgba(16, 185, 129, 0.15);
+          color: #10b981;
+          border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .pilot-status-badge.waiting {
+          background: rgba(245, 158, 11, 0.12);
+          color: #f59e0b;
+          border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .pilot-slot-empty {
+          border: 1px dashed rgba(255, 255, 255, 0.12);
+          border-radius: 10px;
+          padding: 12px;
+          text-align: center;
+          font-size: 12px;
+          color: #64748b;
+          background: rgba(15, 23, 42, 0.3);
         }
       </style>
 
       <div class="menu-title-box">
         <h1 class="retro-main-title">TOP GEAR: LEGADO</h1>
-        <div class="retro-sub-title">★ 16-BIT RETRO ARCADE RACING ★</div>
+        <div class="retro-sub-title">16-BIT RETRO ARCADE RACING</div>
       </div>
 
       <!-- PAINEL PRINCIPAL DO MENU -->
@@ -424,21 +672,21 @@ export class MenuSystem {
         <div class="menu-grid">
           <!-- Coluna Esquerda: Showcase 3D Girando -->
           <div>
-            <div class="menu-label">Veículo Selecionado (3D Turntable)</div>
+            <div class="menu-label">🏎️ Veículo Selecionado</div>
             <div class="showcase-container">
               <canvas id="menu-car-canvas"></canvas>
               <div class="car-selector-nav">
-                <button class="tab-btn" style="flex: 0 0 36px; padding: 4px;" id="btn-prev-car">◀</button>
+                <button class="nav-arrow-btn" id="btn-prev-car" aria-label="Carro anterior">◀</button>
                 <div style="text-align: center;">
                   <div id="menu-car-badge" class="car-name-badge" style="color: #e74c3c;">CANNIBAL</div>
                   <div id="menu-car-desc" class="car-desc-text">Máxima velocidade em retas</div>
                 </div>
-                <button class="tab-btn" style="flex: 0 0 36px; padding: 4px;" id="btn-next-car">▶</button>
+                <button class="nav-arrow-btn" id="btn-next-car" aria-label="Próximo carro">▶</button>
               </div>
             </div>
 
             <!-- Barras de Atributos -->
-            <div style="margin-top: 10px; background: #0c101c; padding: 10px; border-radius: 6px; border: 1px solid #1f2a48;">
+            <div class="car-stats-card">
               <div class="car-stat-row">
                 <span>Velocidade Máx</span>
                 <div class="stat-bar-bg"><div id="stat-speed" class="stat-bar-fill" style="width: 90%;"></div></div>
@@ -453,7 +701,7 @@ export class MenuSystem {
               </div>
               <div class="car-stat-row">
                 <span>Consumo Gasolina</span>
-                <div class="stat-bar-bg"><div id="stat-fuel" class="stat-bar-fill" style="width: 90%; background: #e74c3c;"></div></div>
+                <div class="stat-bar-bg"><div id="stat-fuel" class="stat-bar-fill" style="width: 90%; background: #ef4444;"></div></div>
               </div>
             </div>
           </div>
@@ -462,42 +710,42 @@ export class MenuSystem {
           <div style="display: flex; flex-direction: column; justify-content: space-between;">
             <div>
               <!-- Modo de Jogo -->
-              <div style="margin-bottom: 10px;">
-                <div class="menu-label">Modo de Jogo</div>
+              <div style="margin-bottom: 12px;">
+                <div class="menu-label">🎮 Modo de Jogo</div>
                 <div class="tab-group" id="group-mode">
                   <button class="tab-btn active" data-mode="race">🏆 Corrida vs IA</button>
                   <button class="tab-btn" data-mode="timeattack">⏱️ Time Attack</button>
-                  <button class="tab-btn" data-mode="multiplayer" style="border-color: #00ffff; color: #00ffff;">🌐 Online / P2P</button>
+                  <button class="tab-btn tab-btn-mp" data-mode="multiplayer">🌐 Multiplayer</button>
                 </div>
               </div>
 
               <!-- Seletor Visual de Pista -->
-              <div style="margin-bottom: 10px;">
-                <div class="menu-label">Circuito & Pista Oficial</div>
+              <div style="margin-bottom: 12px;">
+                <div class="menu-label">🏁 Circuito Oficial</div>
                 <div class="track-selector-nav">
-                  <button class="tab-btn" style="flex: 0 0 34px; padding: 6px 2px; font-size: 14px;" id="btn-prev-track">◀</button>
-                  <div style="text-align: center; flex: 1; margin: 0 8px; overflow: hidden;">
-                    <div id="menu-track-badge" style="font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #f1c40f; text-shadow: 0 0 8px rgba(241, 196, 15, 0.4); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                  <button class="nav-arrow-btn" id="btn-prev-track" aria-label="Circuito anterior">◀</button>
+                  <div style="text-align: center; flex: 1; margin: 0 10px; overflow: hidden;">
+                    <div id="menu-track-badge" style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; color: #f1c40f; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
                       🇺🇸 LAS VEGAS SUNSET SPEEDWAY
                     </div>
-                    <div id="menu-track-info" style="font-size: 10px; color: #00ffff; margin-top: 3px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                    <div id="menu-track-info" style="font-size: 10px; color: #38bdf8; margin-top: 3px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
                       <span id="menu-track-country">Estados Unidos</span>
                       <span>•</span>
-                      <span id="menu-track-difficulty" style="color: #2ecc71; font-weight: bold;">Fácil</span>
+                      <span id="menu-track-difficulty" style="color: #10b981; font-weight: 700;">Fácil</span>
                       <span>•</span>
-                      <span id="menu-track-length" style="color: #f5f6fa;">963m</span>
+                      <span id="menu-track-length" style="color: #cbd5e1;">963m</span>
                     </div>
-                    <div id="menu-track-desc" style="font-size: 9px; color: #8fa0c0; margin-top: 2px; font-style: italic; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                    <div id="menu-track-desc" style="font-size: 9px; color: #64748b; margin-top: 2px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
                       Pôr do sol iluminando a strip de cassinos no deserto de Nevada
                     </div>
                   </div>
-                  <button class="tab-btn" style="flex: 0 0 34px; padding: 6px 2px; font-size: 14px;" id="btn-next-track">▶</button>
+                  <button class="nav-arrow-btn" id="btn-next-track" aria-label="Próximo circuito">▶</button>
                 </div>
               </div>
 
               <!-- Dificuldade -->
-              <div style="margin-bottom: 10px;" id="row-difficulty">
-                <div class="menu-label">Dificuldade da IA</div>
+              <div style="margin-bottom: 12px;" id="row-difficulty">
+                <div class="menu-label">⚡ Dificuldade da IA</div>
                 <div class="tab-group" id="group-diff">
                   <button class="tab-btn" data-diff="amateur">Amador</button>
                   <button class="tab-btn active" data-diff="pro">Pro</button>
@@ -506,11 +754,9 @@ export class MenuSystem {
               </div>
 
               <!-- Dicas Rápidas -->
-              <div style="background: #0d1222; border: 1px dashed #2f4370; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #8aa0c4;">
-                <div>🎮 <b>Controles</b>: [W/▲] Acelerar • [S/▼] Freio/Ré</div>
-                <div>↔️ <b>Direção</b>: [A/D/◄/►] Esterço • [SHIFT/N] Nitro</div>
-                <div>⚡ <b>Vácuo</b>: Fique colado atrás para ganhar +20% de velocidade!</div>
-                <div>⛽ <b>Boxes</b>: Pare na faixa iluminada para abastecer</div>
+              <div style="background: rgba(10, 15, 29, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px 10px; font-size: 11px; color: #94a3b8;">
+                <div>🎮 <b>Controles</b>: [W/▲] Acelerar • [S/▼] Freio/Ré • [A/D/◄/►] Direção</div>
+                <div>⚡ <b>Turbo & Vácuo</b>: [SHIFT/N] Nitro • Vácuo colado confere +20% velocidade</div>
               </div>
             </div>
 
@@ -519,102 +765,134 @@ export class MenuSystem {
           </div>
         </div>
 
-        <!-- Rodapé do Menu: Apresentação e Créditos / Fim -->
+        <!-- Rodapé do Menu -->
         <div class="menu-footer-nav">
-          <button class="btn-sub-nav" id="btn-show-presentation">📖 Apresentação & Manual</button>
-          <button class="btn-sub-nav" id="btn-show-credits">🏆 Fim & Créditos</button>
+          <button class="btn-sub-nav" id="btn-show-presentation">📖 Apresentação & Dicas</button>
+          <button class="btn-sub-nav" id="btn-show-credits">🏆 Créditos</button>
         </div>
       </div>
 
-      <!-- PAINEL MULTIPLAYER (WebRTC P2P & Relay) -->
+      <!-- PAINEL MULTIPLAYER -->
       <div id="tab-content-multiplayer" class="menu-card" style="display: none;">
         <div class="sub-screen-card">
-          <div class="sub-screen-title">🌐 Multiplayer Online P2P (WebRTC & Relay)</div>
+          <div class="sub-screen-title">🌐 LOBBY MULTIPLAYER</div>
 
-          <!-- Status de Conexão -->
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 11px;">
-            <div>Status da Rede: <span id="mp-status-badge" class="status-badge status-disconnected">Desconectado</span></div>
-            <div id="mp-status-text" style="color: #8fa0c0; font-size: 11px;">Aguardando ação...</div>
+          <!-- Personalização do Piloto (Nome & Veículo) -->
+          <div class="mp-pilot-config-card">
+            <div>
+              <label class="menu-label" for="input-player-name">👤 Nome do Piloto</label>
+              <input type="text" id="input-player-name" class="mp-input" placeholder="Seu nome..." maxlength="16" />
+            </div>
+            <div>
+              <div class="menu-label">🏎️ Selecionar Veículo</div>
+              <div class="mp-car-picker">
+                <button class="nav-arrow-btn" id="btn-mp-prev-car" style="width: 28px; height: 28px;">◀</button>
+                <span id="mp-car-badge" class="mp-car-badge" style="color: #e74c3c;">CANNIBAL</span>
+                <button class="nav-arrow-btn" id="btn-mp-next-car" style="width: 28px; height: 28px;">▶</button>
+              </div>
+            </div>
           </div>
 
-          <!-- Ações de Sala (Criar / Entrar) -->
-          <div class="room-controls-row">
-            <button id="btn-create-p2p" class="tab-btn" style="flex: 1; padding: 10px; background: #27ae60; color: #fff;">
+          <!-- Seção de Criar / Entrar em Sala (visível quando não conectado) -->
+          <div id="mp-section-connect" class="room-controls-row">
+            <button id="btn-create-p2p" class="btn-action-primary btn-action-host" style="flex: 1;">
               ✨ Criar Sala (Host)
             </button>
-            <input type="text" id="input-room-code" class="room-input" placeholder="CÓDIGO DA SALA" maxlength="8" />
-            <button id="btn-join-p2p" class="tab-btn" style="flex: 0 0 130px; padding: 10px; background: #2980b9; color: #fff;">
+            <input type="text" id="input-room-code" class="room-input" placeholder="CÓDIGO" maxlength="8" />
+            <button id="btn-join-p2p" class="btn-action-primary" style="flex: 0 0 110px;">
               🚀 Entrar
             </button>
           </div>
 
-          <!-- Link de Convite Compartilhável -->
-          <div class="lan-box" id="box-invite-url">
+          <!-- Card de Sala Ativa com Código e Link de Convite -->
+          <div id="box-invite-url" class="room-active-card" style="display: none;">
             <div style="flex: 1; overflow: hidden;">
-              <div style="font-size: 10px; color: #8fa0c0; text-transform: uppercase;">Link de Convite Direto para Amigos:</div>
-              <div id="mp-url-display" style="font-size: 12px; font-weight: bold; color: #00ffff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                Crie ou entre em uma sala para gerar o link
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                <span class="room-code-tag" id="mp-room-code-label">SALA: -----</span>
+                <span id="mp-status-dot" class="status-dot disconnected"></span>
+                <span id="mp-status-badge" style="font-size: 10px; color: #94a3b8;">Desconectado</span>
+              </div>
+              <div id="mp-url-display" style="font-size: 11px; color: #38bdf8; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                Gerando link...
               </div>
             </div>
-            <button id="btn-copy-url" class="tab-btn" style="flex: 0 0 110px; padding: 8px;">📋 Copiar Link</button>
+            <button id="btn-copy-url" class="btn-action-primary" style="padding: 6px 12px; font-size: 11px;">
+              📋 Copiar Link
+            </button>
           </div>
 
-          <div class="menu-label">Pilotos Conectados na Sala:</div>
-          <div id="mp-players-list">
-            <div class="player-row">
-              <span>🟢 Você</span>
-              <span style="color: #f1c40f;">AGUARDANDO SALA...</span>
+          <!-- Status Text Discreto -->
+          <div id="mp-status-text" style="color: #94a3b8; font-size: 11px; margin-bottom: 10px; text-align: center;">
+            Aguardando ação...
+          </div>
+
+          <!-- Lista de Pilotos Conectados -->
+          <div class="menu-label">Pilotos na Sala:</div>
+          <div id="mp-players-list" class="pilots-list-container">
+            <div class="pilot-slot-empty">
+              Crie uma sala ou entre com um código para iniciar.
             </div>
           </div>
 
+          <!-- Botões de Ação da Sala -->
           <div style="display: flex; gap: 10px; margin-top: 14px;">
-            <button id="btn-mp-ready" class="tab-btn" style="flex: 1; padding: 12px; font-size: 14px; background: #2980b9;">
-              ✅ ESTOU PRONTO
+            <button id="btn-mp-ready" class="btn-action-primary" style="flex: 1; padding: 12px; font-size: 14px; background: rgba(30, 41, 59, 0.8);">
+              ✓ ESTOU PRONTO
             </button>
             <button id="btn-mp-start" class="btn-start-race" style="flex: 1; margin: 0; padding: 12px; font-size: 14px;" disabled>
-              🏁 LARGADA MULTIPLAYER
+              🏁 INICIAR CORRIDA
             </button>
           </div>
 
-          <button class="btn-back-menu" id="btn-back-from-mp">⬅️ VOLTAR AO MENU (ESC)</button>
+          <button class="btn-back-menu" id="btn-back-from-mp">← Voltar ao Menu Principal (ESC)</button>
         </div>
       </div>
 
       <!-- PAINEL DE APRESENTAÇÃO -->
       <div id="tab-content-presentation" class="menu-card" style="display: none;">
         <div class="sub-screen-card">
-          <div class="sub-screen-title">📖 Apresentação & Manual do Piloto</div>
-          <p style="color: #00ffff; font-weight: bold; margin-bottom: 8px;">Bem-vindo ao Top Gear: Legado!</p>
-          <p>
-            Inspirado no lendário clássico de corrida dos anos 90, o <b>Top Gear: Legado</b> recria a emoção de alta velocidade arcade com física determinística a 60 Hz, simulação de consumo de combustível, pit stops estratégicos e colisões intensas entre pilotos.
+          <div class="sub-screen-title">📖 MANUAL DO PILOTO</div>
+          <p style="color: #38bdf8; font-weight: 600; margin-bottom: 8px;">Bem-vindo ao Top Gear: Legado!</p>
+          <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
+            Inspirado no clássico de corrida dos anos 90, o <b>Top Gear: Legado</b> recria a velocidade arcade com física determinística a 60 Hz, consumo de combustível, pit stops estratégicos e colisões intensas entre pilotos.
           </p>
 
-          <h3 style="color: #f1c40f; margin-top: 14px; margin-bottom: 6px;">🏎️ Dicas de Pilotagem Arcade:</h3>
-          <ul style="padding-left: 20px; font-size: 12px; color: #dcdde1;">
-            <li><b>Vácuo Aerodinâmico (*Slipstream*)</b>: Andar colado atrás de outro carro reduz o arrasto e confere até +20% de aceleração.</li>
-            <li><b>Gestão de Nitro</b>: Você tem 3 cargas por volta. Use na longa <i>Reta do Deserto</i> para ultrapassagens fulminantes.</li>
-            <li><b>Colisão & Bloqueio</b>: Os carros possuem colisão física arcade. Bater na traseira ou empurrar adversários afeta a trajetória de ambos!</li>
-            <li><b>Estratégia de Pit Stop</b>: Entre na faixa de boxes iluminada por lasers holográficos para reabastecer rapidamente.</li>
-          </ul>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; color: #cbd5e1;">
+            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
+              <b style="color: #f1c40f;">⚡ Vácuo (Slipstream)</b><br/>
+              Andar colado atrás de outro carro confere até +20% de aceleração.
+            </div>
+            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
+              <b style="color: #f1c40f;">🚀 Cargas de Nitro</b><br/>
+              Você tem 3 cargas de turbo por volta para ultrapassagens fulminantes.
+            </div>
+            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
+              <b style="color: #f1c40f;">💥 Colisões Arcade</b><br/>
+              Bater ou empurrar adversários afeta a trajetória de ambos em pista.
+            </div>
+            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
+              <b style="color: #f1c40f;">⛽ Pit Stop</b><br/>
+              Entre na faixa de boxes à esquerda da reta para reabastecer combustível.
+            </div>
+          </div>
 
-          <button class="btn-back-menu" id="btn-back-from-presentation">⬅️ VOLTAR AO MENU (ESC)</button>
+          <button class="btn-back-menu" id="btn-back-from-presentation">← Voltar ao Menu Principal (ESC)</button>
         </div>
       </div>
 
       <!-- PAINEL DE FIM E CRÉDITOS -->
       <div id="tab-content-credits" class="menu-card" style="display: none;">
         <div class="sub-screen-card" style="text-align: center;">
-          <div class="sub-screen-title">🏆 Top Gear: Legado — Fim & Créditos</div>
-          <p style="color: #f1c40f; font-size: 16px; font-weight: 900; margin-bottom: 12px;">OBRIGADO POR JOGAR!</p>
+          <div class="sub-screen-title">🏆 CRÉDITOS</div>
+          <p style="color: #f1c40f; font-size: 15px; font-weight: 800; margin-bottom: 12px;">OBRIGADO POR JOGAR!</p>
           
-          <div style="font-size: 12px; color: #ced6e0; line-height: 1.8;">
-            <p><b>Desenvolvimento & Física Web Arcade</b><br/>Equipe Top Gear Legado</p>
-            <p><b>Design 3D & Efeitos Procedurais</b><br/>Three.js + Shaders Retrô</p>
-            <p><b>Multiplayer em Tempo Real</b><br/>WebRTC P2P + WebSocket Low Latency Engine</p>
-            <p><b>Homenagem Especial</b><br/>A todos os fãs de jogos de corrida 16-bit dos anos 90</p>
+          <div style="font-size: 12px; color: #94a3b8; line-height: 1.8;">
+            <p><b style="color: #f8fafc;">Desenvolvimento & Física Web Arcade</b><br/>Equipe Top Gear Legado</p>
+            <p><b style="color: #f8fafc;">Renderização 3D Procedural</b><br/>Three.js + Shaders Retrô</p>
+            <p><b style="color: #f8fafc;">Multiplayer Low-Latency</b><br/>WebRTC P2P + PeerJS Network Engine</p>
           </div>
 
-          <button class="btn-back-menu" id="btn-back-from-credits">⬅️ VOLTAR AO MENU (ESC)</button>
+          <button class="btn-back-menu" id="btn-back-from-credits">← Voltar ao Menu Principal (ESC)</button>
         </div>
       </div>
     `;
@@ -629,20 +907,23 @@ export class MenuSystem {
       const textEl = this.overlay.querySelector<HTMLDivElement>('#mp-status-text');
       if (textEl) {
         textEl.textContent = msg;
-        textEl.style.color = isError ? '#e74c3c' : '#00ffff';
+        textEl.style.color = isError ? '#ef4444' : '#38bdf8';
       }
     };
 
     this.mpClient.onConnectionStatusChangeCallback = (status) => {
       const badgeEl = this.overlay.querySelector<HTMLSpanElement>('#mp-status-badge');
+      const dotEl = this.overlay.querySelector<HTMLSpanElement>('#mp-status-dot');
+      if (dotEl) {
+        dotEl.className = `status-dot ${status}`;
+      }
       if (badgeEl) {
-        badgeEl.className = `status-badge status-${status}`;
         const labels: Record<string, string> = {
-          connected: '🟢 Conectado',
-          connecting: '🟡 Conectando...',
-          reconnecting: '🟠 Reconectando...',
-          disconnected: '⚪ Desconectado',
-          failed: '🔴 Erro de Rede',
+          connected: 'Conectado',
+          connecting: 'Conectando...',
+          reconnecting: 'Reconectando...',
+          disconnected: 'Desconectado',
+          failed: 'Erro de Conexão',
         };
         badgeEl.textContent = labels[status] || status;
       }
@@ -678,7 +959,7 @@ export class MenuSystem {
       input.value = roomCode.toUpperCase();
     }
     const car = ALL_CARS[this.selectedCarIndex];
-    this.mpClient.joinP2PRoom(roomCode, 'Piloto Desafiante', car.id).catch((err) => {
+    this.mpClient.joinP2PRoom(roomCode, this.playerName, car.id).catch((err) => {
       console.warn('[WebRTC Join Error]', err);
     });
   }
@@ -686,37 +967,100 @@ export class MenuSystem {
   private renderMultiplayerLobby(players: NetworkPlayerInfo[], canStart: boolean, roomCode?: string): void {
     const listEl = this.overlay.querySelector<HTMLDivElement>('#mp-players-list');
     const startBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-start');
+    const readyBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-ready');
     const urlDisplay = this.overlay.querySelector<HTMLDivElement>('#mp-url-display');
-    const inputRoom = this.overlay.querySelector<HTMLInputElement>('#input-room-code');
+    const roomCodeLabel = this.overlay.querySelector<HTMLSpanElement>('#mp-room-code-label');
+    const inviteBox = this.overlay.querySelector<HTMLDivElement>('#box-invite-url');
+    const connectSection = this.overlay.querySelector<HTMLDivElement>('#mp-section-connect');
 
     const effectiveRoomCode = roomCode || this.mpClient.roomCode;
     if (effectiveRoomCode) {
+      if (inviteBox) inviteBox.style.display = 'flex';
+      if (connectSection) connectSection.style.display = 'none';
+
+      if (roomCodeLabel) {
+        roomCodeLabel.textContent = `SALA: ${effectiveRoomCode}`;
+      }
+
       const inviteUrl = this.mpClient.getInviteUrl() || `${window.location.origin}/?join=${effectiveRoomCode}`;
       if (urlDisplay) {
         urlDisplay.textContent = inviteUrl;
       }
-      if (inputRoom && !inputRoom.value) {
-        inputRoom.value = effectiveRoomCode;
-      }
+    } else {
+      if (inviteBox) inviteBox.style.display = 'none';
+      if (connectSection) connectSection.style.display = 'flex';
     }
 
     if (listEl) {
-      listEl.innerHTML = players
-        .map((p) => {
-          const isMe = p.id === this.mpClient.playerId || (this.mpClient.isHost && p.isHost) || (!this.mpClient.isHost && !p.isHost);
-          const statusText = p.ready ? '🟢 PRONTO' : '🟡 AGUARDANDO...';
-          return `
-            <div class="player-row" style="${isMe ? 'border-color: #00d2ff;' : ''}">
-              <span>${p.name} ${isMe ? '<b>(Você)</b>' : ''} — <span style="color: #f1c40f;">${p.carId.toUpperCase()}</span></span>
-              <span style="font-weight: bold; font-size: 11px;">${statusText}</span>
+      if (players.length === 0) {
+        listEl.innerHTML = `
+          <div class="pilot-slot-empty">
+            ⏳ Aguardando conexão com a sala...
+          </div>
+        `;
+      } else {
+        const renderedCards = players
+          .map((p) => {
+            const isMe = p.id === this.mpClient.playerId || (this.mpClient.isHost && p.isHost) || (!this.mpClient.isHost && !p.isHost && players.length === 1);
+            const car = ALL_CARS.find((c) => c.id === p.carId) || ALL_CARS[0];
+            const isReady = p.ready;
+
+            return `
+              <div class="pilot-card ${isMe ? 'is-local' : ''}">
+                <div class="pilot-info-left">
+                  <span class="pilot-car-icon">🏎️</span>
+                  <div>
+                    <div class="pilot-name-box">
+                      <span class="pilot-name-text">${escapeHtml(p.name)}</span>
+                      ${isMe ? '<span class="badge-tag badge-you">VOCÊ</span>' : ''}
+                      ${p.isHost ? '<span class="badge-tag badge-host">HOST</span>' : ''}
+                    </div>
+                    <div style="margin-top: 2px;">
+                      <span class="badge-car-name" style="color: ${car.color}; border-color: ${car.color}44;">${car.name.toUpperCase()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  ${
+                    isReady
+                      ? '<span class="pilot-status-badge ready">✓ PRONTO</span>'
+                      : '<span class="pilot-status-badge waiting">⏳ AGUARDANDO</span>'
+                  }
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        const emptySlot =
+          players.length === 1
+            ? `
+            <div class="pilot-slot-empty">
+              ⏳ Aguardando 2º piloto entrar pelo link ou código...
             </div>
-          `;
-        })
-        .join('');
+          `
+            : '';
+
+        listEl.innerHTML = renderedCards + emptySlot;
+      }
     }
 
     if (startBtn) {
       startBtn.disabled = !(this.mpClient.isHost && canStart);
+      startBtn.style.display = this.mpClient.isHost ? 'flex' : 'none';
+    }
+
+    if (readyBtn) {
+      readyBtn.style.display = !this.mpClient.isHost ? 'flex' : 'none';
+      if (this.isMpReady) {
+        readyBtn.textContent = '✓ PRONTO (CANCELAR)';
+        readyBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        readyBtn.style.borderColor = '#10b981';
+      } else {
+        readyBtn.textContent = '✓ ESTOU PRONTO';
+        readyBtn.style.background = 'rgba(30, 41, 59, 0.8)';
+        readyBtn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+      }
     }
   }
 
@@ -741,9 +1085,40 @@ export class MenuSystem {
     if (presEl) presEl.style.display = tab === 'presentation' ? 'block' : 'none';
     if (credEl) credEl.style.display = tab === 'credits' ? 'block' : 'none';
     if (mpEl) mpEl.style.display = tab === 'multiplayer' ? 'block' : 'none';
+
+    if (tab === 'multiplayer') {
+      const nameInput = this.overlay.querySelector<HTMLInputElement>('#input-player-name');
+      if (nameInput) {
+        nameInput.value = this.playerName;
+      }
+    }
+  }
+
+  private syncMultiplayerCarAndName(): void {
+    const car = ALL_CARS[this.selectedCarIndex];
+    if (this.mpClient.isConnected || this.mpClient.isHost) {
+      this.mpClient.joinLobby(this.playerName, car.id);
+      if (!this.mpClient.isHost) {
+        this.mpClient.setReady(this.isMpReady, car.id);
+      }
+    }
   }
 
   private bindEvents(): void {
+    // Input de Nome do Jogador
+    const nameInput = this.overlay.querySelector<HTMLInputElement>('#input-player-name');
+    if (nameInput) {
+      nameInput.value = this.playerName;
+      nameInput.oninput = () => {
+        const val = nameInput.value.trim();
+        this.playerName = val || 'Piloto';
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('topgear_player_name', this.playerName);
+        }
+        this.syncMultiplayerCarAndName();
+      };
+    }
+
     // Abas de Modo
     const modeBtns = this.overlay.querySelectorAll<HTMLButtonElement>('#group-mode .tab-btn');
     modeBtns.forEach((btn) => {
@@ -766,7 +1141,7 @@ export class MenuSystem {
       };
     });
 
-    // Navegação de Pistas (Botões ◀ / ▶)
+    // Navegação de Pistas
     const prevTrackBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-prev-track');
     const nextTrackBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-next-track');
 
@@ -796,7 +1171,7 @@ export class MenuSystem {
       };
     });
 
-    // Navegação de Carros
+    // Navegação de Carros (Menu Principal)
     const prevBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-prev-car');
     const nextBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-next-car');
 
@@ -815,6 +1190,27 @@ export class MenuSystem {
       };
     }
 
+    // Navegação de Carros (Lobby Multiplayer)
+    const mpPrevCarBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-prev-car');
+    const mpNextCarBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-next-car');
+
+    if (mpPrevCarBtn) {
+      mpPrevCarBtn.onclick = () => {
+        this.selectedCarIndex = (this.selectedCarIndex - 1 + ALL_CARS.length) % ALL_CARS.length;
+        this.updateCarDisplay();
+        this.syncMultiplayerCarAndName();
+        soundSystem.playBeep(620);
+      };
+    }
+    if (mpNextCarBtn) {
+      mpNextCarBtn.onclick = () => {
+        this.selectedCarIndex = (this.selectedCarIndex + 1) % ALL_CARS.length;
+        this.updateCarDisplay();
+        this.syncMultiplayerCarAndName();
+        soundSystem.playBeep(620);
+      };
+    }
+
     // Botão Iniciar Single Player
     const startBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-start');
     if (startBtn) {
@@ -826,7 +1222,7 @@ export class MenuSystem {
     if (btnCreateP2P) {
       btnCreateP2P.onclick = () => {
         const car = ALL_CARS[this.selectedCarIndex];
-        this.mpClient.createP2PRoom('Piloto 1 (Host)', car.id).catch((err) => {
+        this.mpClient.createP2PRoom(this.playerName, car.id).catch((err) => {
           console.warn('[WebRTC Create Room Error]', err);
         });
       };
@@ -850,7 +1246,7 @@ export class MenuSystem {
       btnCopy.onclick = () => {
         const inviteUrl = this.mpClient.getInviteUrl() || window.location.href;
         navigator.clipboard.writeText(inviteUrl);
-        btnCopy.textContent = '✅ Copiado!';
+        btnCopy.textContent = '✓ Copiado!';
         setTimeout(() => {
           btnCopy.textContent = '📋 Copiar Link';
         }, 2000);
@@ -861,10 +1257,9 @@ export class MenuSystem {
     if (btnReady) {
       btnReady.onclick = () => {
         this.isMpReady = !this.isMpReady;
-        btnReady.textContent = this.isMpReady ? '❌ CANCELAR PRONTO' : '✅ ESTOU PRONTO';
-        btnReady.style.background = this.isMpReady ? '#e74c3c' : '#2980b9';
         const car = ALL_CARS[this.selectedCarIndex];
         this.mpClient.setReady(this.isMpReady, car.id);
+        this.renderMultiplayerLobby(this.networkPlayers, false);
       };
     }
 
@@ -872,7 +1267,7 @@ export class MenuSystem {
     if (btnMpStart) {
       btnMpStart.onclick = () => {
         if (this.networkPlayers.length < 2) {
-          alert('Aguarde seu amigo entrar na sala e ficar PRONTO antes de iniciar a largada!');
+          alert('Aguarde o segundo piloto entrar na sala e ficar PRONTO antes de iniciar a largada!');
           return;
         }
         const track = ALL_TRACKS[this.selectedTrackIndex] || ALL_TRACKS[0];
@@ -891,10 +1286,12 @@ export class MenuSystem {
     if (btnCred) btnCred.onclick = () => this.setTab('credits');
     if (btnBackPres) btnBackPres.onclick = () => this.setTab('main');
     if (btnBackCred) btnBackCred.onclick = () => this.setTab('main');
-    if (btnBackMp) btnBackMp.onclick = () => {
-      this.mpClient.disconnect();
-      this.setTab('main');
-    };
+    if (btnBackMp) {
+      btnBackMp.onclick = () => {
+        this.mpClient.disconnect();
+        this.setTab('main');
+      };
+    }
   }
 
   private updateTrackDisplay(): void {
@@ -906,10 +1303,10 @@ export class MenuSystem {
     const desc = this.overlay.querySelector<HTMLDivElement>('#menu-track-desc');
 
     const diffColors: Record<string, string> = {
-      'Fácil': '#2ecc71',
-      'Médio': '#f39c12',
-      'Difícil': '#e67e22',
-      'Extremo': '#e74c3c',
+      'Fácil': '#10b981',
+      'Médio': '#f59e0b',
+      'Difícil': '#f97316',
+      'Extremo': '#ef4444',
     };
 
     if (badge) {
@@ -921,7 +1318,7 @@ export class MenuSystem {
     }
     if (diff) {
       diff.textContent = track.difficulty;
-      diff.style.color = diffColors[track.difficulty] || '#00ffff';
+      diff.style.color = diffColors[track.difficulty] || '#38bdf8';
     }
     if (len) {
       const totalMeters =
@@ -942,6 +1339,7 @@ export class MenuSystem {
   private updateCarDisplay(): void {
     const car: CarStats = ALL_CARS[this.selectedCarIndex];
     const badge = this.overlay.querySelector<HTMLDivElement>('#menu-car-badge');
+    const mpBadge = this.overlay.querySelector<HTMLSpanElement>('#mp-car-badge');
     const desc = this.overlay.querySelector<HTMLDivElement>('#menu-car-desc');
     const statSpeed = this.overlay.querySelector<HTMLDivElement>('#stat-speed');
     const statAccel = this.overlay.querySelector<HTMLDivElement>('#stat-accel');
@@ -953,12 +1351,16 @@ export class MenuSystem {
       sidewinder: 'Equilíbrio ideal de velocidade e frenagem',
       razor: 'Aceleração brutal e aderência nas curvas',
       weasel: 'Econômico e extremamente ágil',
-      night_viper: 'Superbike Bônus: Aceleração insana e máxima agilidade',
+      night_viper: 'Superbike Bônus: Aceleração insana e agilidade',
     };
 
     if (badge) {
       badge.textContent = car.name.toUpperCase();
       badge.style.color = car.color;
+    }
+    if (mpBadge) {
+      mpBadge.textContent = car.name.toUpperCase();
+      mpBadge.style.color = car.color;
     }
     if (desc) {
       desc.textContent = carDescriptions[car.id] || 'Veículo esportivo';
@@ -971,17 +1373,22 @@ export class MenuSystem {
     if (this.carShowcase) {
       this.carShowcase.setCar(car);
     }
-
-    if (this.currentTab === 'multiplayer' && this.mpClient.isConnected) {
-      this.mpClient.setReady(this.isMpReady, car.id);
-    }
   }
 
   private handleKeyDown = (e: KeyboardEvent): void => {
     if (!this.isVisible) return;
 
+    // Ignora atalhos globais se o foco estiver num input de texto
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      return;
+    }
+
     if (e.code === 'Escape') {
       if (this.currentTab !== 'main') {
+        if (this.currentTab === 'multiplayer') {
+          this.mpClient.disconnect();
+        }
         this.setTab('main');
       }
     } else if (this.currentTab === 'main') {
@@ -1000,10 +1407,12 @@ export class MenuSystem {
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
         this.selectedCarIndex = (this.selectedCarIndex - 1 + ALL_CARS.length) % ALL_CARS.length;
         this.updateCarDisplay();
+        this.syncMultiplayerCarAndName();
         soundSystem.playBeep(620);
       } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
         this.selectedCarIndex = (this.selectedCarIndex + 1) % ALL_CARS.length;
         this.updateCarDisplay();
+        this.syncMultiplayerCarAndName();
         soundSystem.playBeep(620);
       }
     }
@@ -1054,4 +1463,13 @@ export class MenuSystem {
     }
     this.overlay.remove();
   }
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
