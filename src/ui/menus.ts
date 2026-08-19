@@ -76,8 +76,8 @@ export class MenuSystem {
         #retro-menu-overlay {
           position: absolute;
           inset: 0;
-          background: radial-gradient(ellipse at 50% 30%, rgba(18, 24, 42, 0.96) 0%, rgba(8, 11, 20, 0.98) 100%);
-          backdrop-filter: blur(16px);
+          background: radial-gradient(ellipse at 50% 15%, rgba(18, 26, 44, 0.97) 0%, rgba(6, 10, 18, 0.99) 100%);
+          backdrop-filter: blur(20px);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -87,151 +87,172 @@ export class MenuSystem {
           z-index: 999;
           user-select: none;
           overflow-y: auto;
-          padding: 20px 16px;
+          padding: 24px 16px;
         }
 
-        .menu-title-box {
+        /* CABEÇALHO BRANDING */
+        .brand-header {
           text-align: center;
-          margin-bottom: 14px;
+          margin-bottom: 16px;
+        }
+
+        .brand-title-wrap {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 10px;
           position: relative;
         }
 
-        .retro-main-title {
+        .brand-title-main {
           font-family: 'Courier New', monospace, sans-serif;
-          font-size: 38px;
+          font-size: 34px;
           font-weight: 900;
-          letter-spacing: 4px;
-          color: #f1c40f;
-          text-shadow: 0 0 20px rgba(241, 196, 15, 0.4);
+          letter-spacing: 3px;
+          color: #ffffff;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
           margin: 0;
         }
 
-        .retro-sub-title {
-          font-size: 11px;
+        .brand-title-accent {
+          font-family: 'Courier New', monospace, sans-serif;
+          font-size: 34px;
+          font-weight: 900;
           letter-spacing: 3px;
-          color: #38bdf8;
-          margin-top: 4px;
-          text-transform: uppercase;
-          font-weight: 700;
+          color: #f59e0b;
+          text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
         }
 
-        .menu-card {
-          background: rgba(15, 23, 42, 0.85);
+        .brand-subtitle-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #38bdf8;
+          background: rgba(56, 189, 248, 0.08);
+          border: 1px solid rgba(56, 189, 248, 0.2);
+          border-radius: 20px;
+          padding: 3px 12px;
+          margin-top: 4px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        /* CARD PRINCIPAL UNIFICADO EM 2 COLUNAS */
+        .unified-studio-card {
+          background: rgba(13, 19, 33, 0.88);
           border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 16px;
-          padding: 22px 28px;
-          width: 94%;
-          max-width: 840px;
-          box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+          border-radius: 18px;
+          width: 96%;
+          max-width: 920px;
+          box-shadow: 0 24px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.04);
           position: relative;
           z-index: 1001;
-          backdrop-filter: blur(12px);
+          backdrop-filter: blur(16px);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
         }
 
-        .menu-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
+        /* BARRA SUPERIOR DE ABAS */
+        .studio-top-nav {
+          display: flex;
+          background: rgba(8, 12, 22, 0.6);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          padding: 8px 12px;
+          gap: 6px;
         }
 
-        @media (max-width: 768px) {
-          .menu-grid {
-            grid-template-columns: 1fr;
-          }
-          .retro-main-title {
-            font-size: 28px;
-          }
-        }
-
-        .menu-label {
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 1.2px;
+        .nav-tab-pill {
+          background: transparent;
           color: #94a3b8;
-          margin-bottom: 6px;
-          font-weight: 700;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .tab-group {
-          display: flex;
-          gap: 6px;
-        }
-
-        .tab-btn {
-          flex: 1;
-          background: rgba(30, 41, 59, 0.6);
-          color: #cbd5e1;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid transparent;
           border-radius: 8px;
-          padding: 9px 12px;
+          padding: 8px 16px;
           font-family: inherit;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 700;
           cursor: pointer;
-          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-          text-align: center;
-          display: flex;
+          transition: all 0.15s ease;
+          display: inline-flex;
           align-items: center;
-          justify-content: center;
           gap: 6px;
         }
 
-        .tab-btn:hover {
-          background: rgba(51, 65, 85, 0.8);
-          color: #fff;
-          border-color: rgba(255, 255, 255, 0.2);
+        .nav-tab-pill:hover {
+          color: #f8fafc;
+          background: rgba(255, 255, 255, 0.04);
         }
 
-        .tab-btn.active {
-          background: #ef4444;
-          border-color: #f87171;
-          color: #fff;
-          box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+        .nav-tab-pill.active {
+          background: rgba(245, 158, 11, 0.12);
+          color: #fbbf24;
+          border-color: rgba(245, 158, 11, 0.35);
         }
 
-        .tab-btn.tab-btn-mp {
-          border-color: rgba(56, 189, 248, 0.4);
+        .nav-tab-pill.pill-mp.active {
+          background: rgba(56, 189, 248, 0.12);
           color: #38bdf8;
+          border-color: rgba(56, 189, 248, 0.35);
         }
 
-        .tab-btn.tab-btn-mp:hover {
-          background: rgba(56, 189, 248, 0.15);
-          border-color: #38bdf8;
+        /* CORPO EM GRID BENTO (2 COLUNAS) */
+        .studio-grid-body {
+          display: grid;
+          grid-template-columns: 360px 1fr;
+          min-height: 440px;
         }
 
-        .showcase-container {
-          background: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.9) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+        @media (max-width: 820px) {
+          .studio-grid-body {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* COLUNA ESQUERDA: GARAGEM & SHOWCASE 3D */
+        .garage-column {
+          padding: 18px;
+          background: rgba(10, 15, 27, 0.5);
+          border-right: 1px solid rgba(255, 255, 255, 0.06);
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        @media (max-width: 820px) {
+          .garage-column {
+            border-right: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          }
+        }
+
+        .showcase-viewport {
+          background: radial-gradient(circle at 50% 60%, rgba(30, 41, 59, 0.6) 0%, rgba(10, 14, 26, 0.95) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
           overflow: hidden;
           position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+          box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4);
         }
 
         #menu-car-canvas {
           width: 100%;
-          height: 170px;
+          height: 180px;
           display: block;
         }
 
-        .car-selector-nav {
+        .car-selector-strip {
           display: flex;
-          width: 100%;
-          justify-content: space-between;
           align-items: center;
+          justify-content: space-between;
           padding: 8px 12px;
-          background: rgba(10, 15, 29, 0.7);
+          background: rgba(8, 12, 22, 0.7);
           border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
-        .nav-arrow-btn {
+        .car-arrow-btn {
           background: rgba(30, 41, 59, 0.8);
-          color: #fff;
+          color: #f8fafc;
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 6px;
           width: 32px;
@@ -241,288 +262,285 @@ export class MenuSystem {
           justify-content: center;
           cursor: pointer;
           transition: all 0.15s ease;
-          font-size: 14px;
+          font-size: 13px;
         }
 
-        .nav-arrow-btn:hover {
+        .car-arrow-btn:hover {
           background: rgba(51, 65, 85, 1);
           border-color: #38bdf8;
           color: #38bdf8;
         }
 
-        .car-name-badge {
+        .car-brand-tag {
           font-family: 'Courier New', monospace, sans-serif;
-          font-size: 17px;
+          font-size: 16px;
           font-weight: 900;
           letter-spacing: 2px;
+          text-align: center;
         }
 
-        .car-desc-text {
-          font-size: 11px;
+        .car-desc-label {
+          font-size: 10px;
           color: #94a3b8;
           text-align: center;
           margin-top: 2px;
+          font-style: italic;
         }
 
-        .car-stats-card {
-          margin-top: 10px;
-          background: rgba(10, 15, 29, 0.6);
-          padding: 10px 14px;
-          border-radius: 10px;
+        /* TELEMETRIA DO CARRO */
+        .telemetry-box {
+          background: rgba(8, 12, 22, 0.5);
           border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+          padding: 10px 12px;
         }
 
-        .car-stat-row {
+        .telemetry-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
           font-size: 11px;
-          margin-bottom: 6px;
-          color: #cbd5e1;
+          margin-bottom: 5px;
         }
 
-        .car-stat-row:last-child {
+        .telemetry-row:last-child {
           margin-bottom: 0;
         }
 
-        .stat-bar-bg {
+        .telemetry-label {
+          color: #94a3b8;
+          font-weight: 600;
+        }
+
+        .telemetry-bar-bg {
           width: 55%;
-          height: 5px;
+          height: 6px;
           background: rgba(30, 41, 59, 0.8);
           border-radius: 3px;
           overflow: hidden;
         }
 
-        .stat-bar-fill {
+        .telemetry-bar-fill {
           height: 100%;
-          background: #38bdf8;
           border-radius: 3px;
+          background: #38bdf8;
           transition: width 0.3s ease;
         }
 
-        .track-selector-nav {
-          background: rgba(10, 15, 29, 0.6);
+        /* DOSSIÊ DO PILOTO (NOME) */
+        .pilot-dossier-box {
+          background: rgba(8, 12, 22, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 10px;
           padding: 8px 12px;
           display: flex;
           align-items: center;
+          gap: 10px;
+        }
+
+        .pilot-dossier-input {
+          flex: 1;
+          background: transparent;
+          border: none;
+          color: #38bdf8;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          outline: none;
+        }
+
+        .pilot-dossier-input::placeholder {
+          color: #64748b;
+        }
+
+        /* COLUNA DIREITA: DECK DE CONTROLE & ABAS */
+        .control-column {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
           justify-content: space-between;
         }
 
-        .btn-start-race {
-          width: 100%;
-          margin-top: 14px;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        .deck-section-title {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          color: #94a3b8;
+          font-weight: 800;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        /* CONTROLES DE CIRCUITO / MODO SINGLE PLAYER */
+        .track-card {
+          background: rgba(8, 12, 22, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 10px 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 14px;
+        }
+
+        .tab-btn-group {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 14px;
+        }
+
+        .sub-tab-btn {
+          flex: 1;
+          background: rgba(30, 41, 59, 0.5);
+          color: #cbd5e1;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 8px;
+          padding: 8px 10px;
+          font-family: inherit;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: center;
+        }
+
+        .sub-tab-btn:hover {
+          background: rgba(51, 65, 85, 0.7);
           color: #fff;
+        }
+
+        .sub-tab-btn.active {
+          background: #f59e0b;
+          color: #0f172a;
+          border-color: #fbbf24;
+          font-weight: 800;
+        }
+
+        .btn-launch-solo {
+          width: 100%;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: #ffffff;
           border: none;
-          padding: 13px 20px;
+          border-radius: 10px;
+          padding: 14px 20px;
           font-family: inherit;
           font-size: 15px;
-          font-weight: 800;
-          letter-spacing: 1.5px;
-          border-radius: 10px;
+          font-weight: 900;
+          letter-spacing: 2px;
           cursor: pointer;
-          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
           transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
+          margin-top: 10px;
         }
 
-        .btn-start-race:hover:not(:disabled) {
+        .btn-launch-solo:hover {
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
           background: linear-gradient(135deg, #34d399 0%, #059669 100%);
         }
 
-        .btn-start-race:disabled {
-          background: rgba(51, 65, 85, 0.5);
-          cursor: not-allowed;
-          box-shadow: none;
-          transform: none;
-          color: #64748b;
-          border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .menu-footer-nav {
-          display: flex;
-          gap: 10px;
-          margin-top: 14px;
-        }
-
-        .btn-sub-nav {
-          flex: 1;
-          background: rgba(30, 41, 59, 0.4);
-          color: #94a3b8;
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 8px;
-          padding: 8px;
-          font-family: inherit;
-          font-size: 11px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-
-        .btn-sub-nav:hover {
-          background: rgba(51, 65, 85, 0.7);
-          color: #f1c40f;
-          border-color: rgba(241, 196, 15, 0.4);
-        }
-
-        .sub-screen-card {
-          padding: 4px;
-          line-height: 1.6;
-        }
-
-        .sub-screen-title {
-          font-size: 20px;
-          color: #f1c40f;
-          font-weight: 800;
-          margin-bottom: 14px;
-          text-align: center;
-          letter-spacing: 1px;
-        }
-
-        .btn-back-menu {
-          background: rgba(30, 41, 59, 0.6);
-          color: #cbd5e1;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 10px 20px;
-          font-family: inherit;
-          font-size: 13px;
-          font-weight: 600;
-          border-radius: 8px;
-          cursor: pointer;
-          margin-top: 16px;
-          display: block;
-          width: 100%;
-          transition: all 0.15s;
-        }
-
-        .btn-back-menu:hover {
-          background: rgba(51, 65, 85, 0.9);
-          color: #fff;
-          border-color: rgba(255, 255, 255, 0.25);
-        }
-
-        /* MULTIPLAYER REDESIGN */
-        .mp-pilot-config-card {
+        /* PAINEL MULTIPLAYER PADDOCK */
+        .mp-connect-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          background: rgba(10, 15, 29, 0.6);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 10px;
-          padding: 12px 14px;
+          gap: 10px;
           margin-bottom: 14px;
         }
 
         @media (max-width: 600px) {
-          .mp-pilot-config-card {
+          .mp-connect-grid {
             grid-template-columns: 1fr;
           }
         }
 
-        .mp-input {
-          width: 100%;
-          background: rgba(15, 23, 42, 0.9);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 8px;
-          padding: 8px 12px;
-          color: #38bdf8;
-          font-family: inherit;
-          font-size: 13px;
-          font-weight: 600;
-          outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .mp-input:focus {
-          border-color: #38bdf8;
-          box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
-        }
-
-        .mp-car-picker {
+        .mp-action-card {
+          background: rgba(8, 12, 22, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          padding: 12px;
           display: flex;
-          align-items: center;
+          flex-direction: column;
           justify-content: space-between;
-          background: rgba(15, 23, 42, 0.9);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 8px;
-          padding: 4px 8px;
-          height: 38px;
-        }
-
-        .mp-car-badge {
-          font-family: 'Courier New', monospace, sans-serif;
-          font-weight: 900;
-          font-size: 13px;
-          letter-spacing: 1px;
-        }
-
-        .room-controls-row {
-          display: flex;
           gap: 8px;
-          margin-bottom: 12px;
         }
 
-        .room-input {
-          flex: 1;
-          background: rgba(15, 23, 42, 0.9);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 8px;
-          padding: 9px 12px;
-          color: #f1c40f;
-          font-family: 'Courier New', monospace, sans-serif;
-          font-size: 14px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          outline: none;
-        }
-
-        .room-input:focus {
-          border-color: #f1c40f;
-          box-shadow: 0 0 10px rgba(241, 196, 15, 0.25);
-        }
-
-        .btn-action-primary {
+        .mp-btn-host {
           background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-          color: #fff;
+          color: #ffffff;
           border: none;
           border-radius: 8px;
-          padding: 9px 16px;
+          padding: 10px 14px;
           font-family: inherit;
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 800;
+          letter-spacing: 1px;
           cursor: pointer;
-          transition: all 0.15s;
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+          transition: all 0.15s ease;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
         }
 
-        .btn-action-primary:hover {
-          background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
-          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+        .mp-btn-host:hover {
+          background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+          transform: translateY(-1px);
         }
 
-        .btn-action-host {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        .mp-join-row {
+          display: flex;
+          gap: 6px;
         }
 
-        .btn-action-host:hover {
-          background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        .mp-code-input {
+          flex: 1;
+          background: rgba(15, 23, 42, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 8px 10px;
+          color: #f59e0b;
+          font-family: 'Courier New', monospace, sans-serif;
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 2px;
+          text-align: center;
+          outline: none;
         }
 
-        .room-active-card {
-          background: rgba(10, 15, 29, 0.7);
-          border: 1px solid rgba(56, 189, 248, 0.2);
+        .mp-code-input:focus {
+          border-color: #f59e0b;
+          box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+        }
+
+        .mp-btn-join {
+          background: rgba(30, 41, 59, 0.9);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+          border-radius: 8px;
+          padding: 8px 14px;
+          font-family: inherit;
+          font-size: 12px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .mp-btn-join:hover {
+          background: rgba(56, 189, 248, 0.15);
+          border-color: #38bdf8;
+        }
+
+        /* CARD DE SESSÃO ATIVA MULTIPLAYER */
+        .mp-active-session-card {
+          background: rgba(8, 12, 22, 0.7);
+          border: 1px solid rgba(56, 189, 248, 0.25);
           border-radius: 10px;
           padding: 10px 14px;
           margin-bottom: 14px;
@@ -532,367 +550,460 @@ export class MenuSystem {
           gap: 12px;
         }
 
-        .room-code-tag {
+        .mp-session-code-badge {
           font-family: 'Courier New', monospace, sans-serif;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 900;
-          color: #f1c40f;
+          color: #f59e0b;
           letter-spacing: 2px;
         }
 
-        .status-dot {
-          display: inline-block;
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          margin-right: 6px;
+        .mp-status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 10px;
+          font-weight: 700;
+          color: #94a3b8;
         }
 
-        .status-dot.connected { background: #10b981; box-shadow: 0 0 6px #10b981; }
-        .status-dot.connecting { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
-        .status-dot.disconnected { background: #64748b; }
-        .status-dot.failed { background: #ef4444; }
+        .status-led {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+        }
 
-        /* PILOT CARDS */
-        .pilots-list-container {
+        .status-led.connected { background: #10b981; box-shadow: 0 0 6px #10b981; }
+        .status-led.connecting { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+        .status-led.disconnected { background: #64748b; }
+        .status-led.failed { background: #ef4444; }
+
+        .btn-copy-link {
+          background: rgba(30, 41, 59, 0.8);
+          color: #38bdf8;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+          border-radius: 6px;
+          padding: 6px 12px;
+          font-family: inherit;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s;
+          white-space: nowrap;
+        }
+
+        .btn-copy-link:hover {
+          background: rgba(56, 189, 248, 0.15);
+        }
+
+        /* GRID DE SLOTS DE PILOTOS */
+        .pilots-roster {
           display: flex;
           flex-direction: column;
           gap: 8px;
           margin-bottom: 14px;
         }
 
-        .pilot-card {
-          background: rgba(15, 23, 42, 0.75);
+        .pilot-slot-card {
+          background: rgba(10, 15, 27, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 10px;
-          padding: 10px 14px;
+          padding: 8px 12px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           transition: all 0.2s ease;
         }
 
-        .pilot-card.is-local {
+        .pilot-slot-card.is-you {
           border-color: rgba(56, 189, 248, 0.4);
           background: rgba(14, 165, 233, 0.06);
         }
 
-        .pilot-info-left {
+        .pilot-meta-left {
           display: flex;
           align-items: center;
           gap: 10px;
         }
 
-        .pilot-car-icon {
-          font-size: 18px;
-        }
-
-        .pilot-name-box {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .pilot-name-text {
+        .pilot-name-title {
           font-size: 13px;
-          font-weight: 700;
+          font-weight: 800;
           color: #f8fafc;
         }
 
-        .badge-tag {
-          font-size: 9px;
+        .badge-micro {
+          font-size: 8px;
           font-weight: 800;
-          padding: 2px 6px;
+          padding: 2px 5px;
           border-radius: 4px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          margin-left: 4px;
         }
 
-        .badge-you {
-          background: rgba(56, 189, 248, 0.2);
-          color: #38bdf8;
-          border: 1px solid rgba(56, 189, 248, 0.3);
-        }
+        .badge-you { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .badge-host { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
 
-        .badge-host {
-          background: rgba(241, 196, 15, 0.2);
-          color: #f1c40f;
-          border: 1px solid rgba(241, 196, 15, 0.3);
-        }
-
-        .badge-car-name {
+        .badge-car-livery {
           font-family: 'Courier New', monospace, sans-serif;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 800;
-          padding: 2px 6px;
+          padding: 1px 5px;
           border-radius: 4px;
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .pilot-status-badge {
+        .pilot-state-badge {
           font-size: 11px;
           font-weight: 800;
           padding: 4px 10px;
           border-radius: 6px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
         }
 
-        .pilot-status-badge.ready {
+        .pilot-state-badge.ready {
           background: rgba(16, 185, 129, 0.15);
           color: #10b981;
           border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
-        .pilot-status-badge.waiting {
+        .pilot-state-badge.waiting {
           background: rgba(245, 158, 11, 0.12);
           color: #f59e0b;
           border: 1px solid rgba(245, 158, 11, 0.25);
         }
 
-        .pilot-slot-empty {
+        .pilot-slot-waiting {
           border: 1px dashed rgba(255, 255, 255, 0.12);
           border-radius: 10px;
-          padding: 12px;
+          padding: 10px;
           text-align: center;
-          font-size: 12px;
+          font-size: 11px;
           color: #64748b;
-          background: rgba(15, 23, 42, 0.3);
+          background: rgba(10, 15, 27, 0.3);
+        }
+
+        /* BOTÕES DE LOBBY / AÇÃO */
+        .mp-actions-row {
+          display: flex;
+          gap: 10px;
+        }
+
+        .btn-mp-toggle-ready {
+          flex: 1;
+          background: rgba(30, 41, 59, 0.8);
+          color: #f8fafc;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+          padding: 12px;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .btn-mp-toggle-ready.is-ready {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          border-color: #10b981;
+          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-mp-start-race {
+          flex: 1;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: #ffffff;
+          border: none;
+          border-radius: 10px;
+          padding: 12px;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 900;
+          letter-spacing: 1.5px;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+          transition: all 0.15s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .btn-mp-start-race:disabled {
+          background: rgba(51, 65, 85, 0.4);
+          color: #64748b;
+          box-shadow: none;
+          cursor: not-allowed;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-exit-subtab {
+          background: transparent;
+          color: #94a3b8;
+          border: none;
+          font-family: inherit;
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 10px;
+          text-align: center;
+          transition: color 0.15s;
+        }
+
+        .btn-exit-subtab:hover {
+          color: #f8fafc;
+          text-decoration: underline;
+        }
+
+        /* ESTILO EDITORIAL PARA APRESENTAÇÃO E CRÉDITOS */
+        .editorial-container {
+          padding: 8px 4px;
+          line-height: 1.6;
         }
       </style>
 
-      <div class="menu-title-box">
-        <h1 class="retro-main-title">TOP GEAR: LEGADO</h1>
-        <div class="retro-sub-title">16-BIT RETRO ARCADE RACING</div>
+      <!-- CABEÇALHO -->
+      <div class="brand-header">
+        <div class="brand-title-wrap">
+          <span class="brand-title-main">TOP GEAR</span>
+          <span class="brand-title-accent">LEGADO</span>
+        </div>
+        <div>
+          <span class="brand-subtitle-pill">⚡ 16-BIT ARCADE • LOW-LATENCY 60HZ</span>
+        </div>
       </div>
 
-      <!-- PAINEL PRINCIPAL DO MENU -->
-      <div id="tab-content-main" class="menu-card">
-        <div class="menu-grid">
-          <!-- Coluna Esquerda: Showcase 3D Girando -->
-          <div>
-            <div class="menu-label">🏎️ Veículo Selecionado</div>
-            <div class="showcase-container">
+      <!-- CARD PRINCIPAL EM 2 COLUNAS -->
+      <div class="unified-studio-card">
+        <!-- BARRA SUPERIOR DE NAVEGAÇÃO -->
+        <div class="studio-top-nav">
+          <button class="nav-tab-pill active" id="tab-nav-main">🏎️ MODO SOLO</button>
+          <button class="nav-tab-pill pill-mp" id="tab-nav-multiplayer">🌐 MULTIPLAYER PADDOCK</button>
+          <button class="nav-tab-pill" id="tab-nav-presentation">📖 MANUAL</button>
+          <button class="nav-tab-pill" id="tab-nav-credits">🏆 CRÉDITOS</button>
+        </div>
+
+        <div class="studio-grid-body">
+          <!-- COLUNA ESQUERDA: GARAGEM, SHOWCASE 3D & PERFIL DO PILOTO -->
+          <div class="garage-column">
+            <div class="deck-section-title">🏎️ Garagem & Máquina</div>
+            
+            <div class="showcase-viewport">
               <canvas id="menu-car-canvas"></canvas>
-              <div class="car-selector-nav">
-                <button class="nav-arrow-btn" id="btn-prev-car" aria-label="Carro anterior">◀</button>
+              <div class="car-selector-strip">
+                <button class="car-arrow-btn" id="btn-prev-car" aria-label="Veículo anterior">◀</button>
                 <div style="text-align: center;">
-                  <div id="menu-car-badge" class="car-name-badge" style="color: #e74c3c;">CANNIBAL</div>
-                  <div id="menu-car-desc" class="car-desc-text">Máxima velocidade em retas</div>
+                  <div id="menu-car-badge" class="car-brand-tag" style="color: #e74c3c;">CANNIBAL</div>
+                  <div id="menu-car-desc" class="car-desc-label">Foguete em retas com alto consumo</div>
                 </div>
-                <button class="nav-arrow-btn" id="btn-next-car" aria-label="Próximo carro">▶</button>
+                <button class="car-arrow-btn" id="btn-next-car" aria-label="Próximo veículo">▶</button>
               </div>
             </div>
 
-            <!-- Barras de Atributos -->
-            <div class="car-stats-card">
-              <div class="car-stat-row">
-                <span>Velocidade Máx</span>
-                <div class="stat-bar-bg"><div id="stat-speed" class="stat-bar-fill" style="width: 90%;"></div></div>
+            <!-- TELEMETRIA DE ESPECIFICAÇÕES -->
+            <div class="telemetry-box">
+              <div class="telemetry-row">
+                <span class="telemetry-label">Velocidade Máxima</span>
+                <div class="telemetry-bar-bg"><div id="stat-speed" class="telemetry-bar-fill" style="width: 90%;"></div></div>
               </div>
-              <div class="car-stat-row">
-                <span>Aceleração</span>
-                <div class="stat-bar-bg"><div id="stat-accel" class="stat-bar-fill" style="width: 75%;"></div></div>
+              <div class="telemetry-row">
+                <span class="telemetry-label">Aceleração</span>
+                <div class="telemetry-bar-bg"><div id="stat-accel" class="telemetry-bar-fill" style="width: 75%;"></div></div>
               </div>
-              <div class="car-stat-row">
-                <span>Manuseio</span>
-                <div class="stat-bar-bg"><div id="stat-handling" class="stat-bar-fill" style="width: 70%;"></div></div>
+              <div class="telemetry-row">
+                <span class="telemetry-label">Aderência / Curvas</span>
+                <div class="telemetry-bar-bg"><div id="stat-handling" class="telemetry-bar-fill" style="width: 65%;"></div></div>
               </div>
-              <div class="car-stat-row">
-                <span>Consumo Gasolina</span>
-                <div class="stat-bar-bg"><div id="stat-fuel" class="stat-bar-fill" style="width: 90%; background: #ef4444;"></div></div>
+              <div class="telemetry-row">
+                <span class="telemetry-label">Eficiência de Tanque</span>
+                <div class="telemetry-bar-bg"><div id="stat-fuel" class="telemetry-bar-fill" style="width: 45%;"></div></div>
+              </div>
+            </div>
+
+            <!-- DOSSIÊ DO PILOTO -->
+            <div class="pilot-dossier-box">
+              <span style="font-size: 16px;">👤</span>
+              <div style="flex: 1;">
+                <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">Piloto do Grid</div>
+                <input type="text" id="input-player-name" class="pilot-dossier-input" placeholder="Seu apelido..." maxlength="16" />
               </div>
             </div>
           </div>
 
-          <!-- Coluna Direita: Modo, Pista, Dificuldade e Largada -->
-          <div style="display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <!-- Modo de Jogo -->
-              <div style="margin-bottom: 12px;">
-                <div class="menu-label">🎮 Modo de Jogo</div>
-                <div class="tab-group" id="group-mode">
-                  <button class="tab-btn active" data-mode="race">🏆 Corrida vs IA</button>
-                  <button class="tab-btn" data-mode="timeattack">⏱️ Time Attack</button>
-                  <button class="tab-btn tab-btn-mp" data-mode="multiplayer">🌐 Multiplayer</button>
+          <!-- COLUNA DIREITA: CONTEÚDO DA ABA SELECIONADA -->
+          <div class="control-column">
+            <!-- ABA 1: MODO SOLO (PRINCIPAL) -->
+            <div id="tab-content-main" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+              <div>
+                <!-- Seletor de Modo de Prova -->
+                <div class="deck-section-title">🏁 Modo de Prova</div>
+                <div class="tab-btn-group" id="group-mode">
+                  <button class="sub-tab-btn active" data-mode="race">Corrida (Grid com IA)</button>
+                  <button class="sub-tab-btn" data-mode="timeattack">Treino Livre (Solo)</button>
                 </div>
-              </div>
 
-              <!-- Seletor Visual de Pista -->
-              <div style="margin-bottom: 12px;">
-                <div class="menu-label">🏁 Circuito Oficial</div>
-                <div class="track-selector-nav">
-                  <button class="nav-arrow-btn" id="btn-prev-track" aria-label="Circuito anterior">◀</button>
-                  <div style="text-align: center; flex: 1; margin: 0 10px; overflow: hidden;">
-                    <div id="menu-track-badge" style="font-size: 13px; font-weight: 800; letter-spacing: 0.5px; color: #f1c40f; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                      🇺🇸 LAS VEGAS SUNSET SPEEDWAY
+                <!-- Seletor de Circuito -->
+                <div class="deck-section-title">🌍 Circuito de Corrida</div>
+                <div class="track-card">
+                  <button class="car-arrow-btn" id="btn-prev-track" aria-label="Circuito anterior">◀</button>
+                  <div style="text-align: center; flex: 1; padding: 0 10px;">
+                    <div id="menu-track-badge" style="font-family: 'Courier New', monospace, sans-serif; font-size: 15px; font-weight: 900; color: #f59e0b;">
+                      🇺🇸 LAS VEGAS
                     </div>
-                    <div id="menu-track-info" style="font-size: 10px; color: #38bdf8; margin-top: 3px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                      <span id="menu-track-country">Estados Unidos</span>
-                      <span>•</span>
-                      <span id="menu-track-difficulty" style="color: #10b981; font-weight: 700;">Fácil</span>
-                      <span>•</span>
-                      <span id="menu-track-length" style="color: #cbd5e1;">963m</span>
+                    <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">
+                      <span id="menu-track-country">EUA</span> • <span id="menu-track-difficulty" style="color: #10b981; font-weight: 700;">Fácil</span> • <span id="menu-track-length">1200m</span>
                     </div>
-                    <div id="menu-track-desc" style="font-size: 9px; color: #64748b; margin-top: 2px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                      Pôr do sol iluminando a strip de cassinos no deserto de Nevada
+                    <div id="menu-track-desc" style="font-size: 10px; color: #64748b; margin-top: 2px; font-style: italic;">
+                      Retas largas com luzes de neon sob a noite de Nevada.
                     </div>
                   </div>
-                  <button class="nav-arrow-btn" id="btn-next-track" aria-label="Próximo circuito">▶</button>
+                  <button class="car-arrow-btn" id="btn-next-track" aria-label="Próximo circuito">▶</button>
+                </div>
+
+                <!-- Seletor de Dificuldade da IA -->
+                <div id="row-difficulty">
+                  <div class="deck-section-title">⚡ Desafio da Inteligência Artificial</div>
+                  <div class="tab-btn-group" id="group-diff">
+                    <button class="sub-tab-btn" data-diff="amateur">Amador</button>
+                    <button class="sub-tab-btn active" data-diff="pro">Pro</button>
+                    <button class="sub-tab-btn" data-diff="championship">Campeão</button>
+                  </div>
+                </div>
+
+                <!-- Dicas Rápidas de Pilotagem -->
+                <div style="background: rgba(8, 12, 22, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #94a3b8;">
+                  <div>🎮 <b>Controles</b>: [W/▲] Acelerar • [S/▼] Freio • [A/D/◄/►] Direção</div>
+                  <div>⚡ <b>Turbo & Vácuo</b>: [SHIFT/N] Nitro • Vácuo colado confere +20% velocidade</div>
                 </div>
               </div>
 
-              <!-- Dificuldade -->
-              <div style="margin-bottom: 12px;" id="row-difficulty">
-                <div class="menu-label">⚡ Dificuldade da IA</div>
-                <div class="tab-group" id="group-diff">
-                  <button class="tab-btn" data-diff="amateur">Amador</button>
-                  <button class="tab-btn active" data-diff="pro">Pro</button>
-                  <button class="tab-btn" data-diff="championship">Campeão</button>
+              <!-- Botão de Largada Solo -->
+              <button id="btn-start" class="btn-launch-solo">🏁 LARGADA (ENTER)</button>
+            </div>
+
+            <!-- ABA 2: MULTIPLAYER PADDOCK -->
+            <div id="tab-content-multiplayer" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
+              <div>
+                <!-- Conexão / Entrada de Sala (Quando não conectado) -->
+                <div id="mp-section-connect">
+                  <div class="deck-section-title">🌐 Conexão de Sala WebRTC</div>
+                  <div class="mp-connect-grid">
+                    <div class="mp-action-card">
+                      <div>
+                        <div style="font-size: 12px; font-weight: 800; color: #38bdf8; margin-bottom: 2px;">Criar Sala (Host)</div>
+                        <div style="font-size: 10px; color: #94a3b8;">Gere uma sala e convide um amigo para o grid.</div>
+                      </div>
+                      <button id="btn-create-p2p" class="mp-btn-host">✨ Criar Grid (Host)</button>
+                    </div>
+
+                    <div class="mp-action-card">
+                      <div>
+                        <div style="font-size: 12px; font-weight: 800; color: #f59e0b; margin-bottom: 2px;">Entrar com Código</div>
+                        <div style="font-size: 10px; color: #94a3b8;">Digite o código da sala gerado pelo Host.</div>
+                      </div>
+                      <div class="mp-join-row">
+                        <input type="text" id="input-room-code" class="mp-code-input" placeholder="CÓDIGO" maxlength="8" />
+                        <button id="btn-join-p2p" class="mp-btn-join">Entrar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card de Sala Ativa (Quando conectado) -->
+                <div id="box-invite-url" class="mp-active-session-card" style="display: none;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span id="mp-room-code-label" class="mp-session-code-badge">SALA: -----</span>
+                      <span class="mp-status-pill">
+                        <span id="mp-status-dot" class="status-led disconnected"></span>
+                        <span id="mp-status-badge">Desconectado</span>
+                      </span>
+                    </div>
+                    <div id="mp-url-display" style="font-size: 10px; color: #38bdf8; margin-top: 2px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      Link de convite gerado...
+                    </div>
+                  </div>
+                  <button id="btn-copy-url" class="btn-copy-link">📋 Copiar Link</button>
+                </div>
+
+                <!-- Status Text Discreto -->
+                <div id="mp-status-text" style="color: #94a3b8; font-size: 11px; margin-bottom: 8px; text-align: center;">
+                  Escolha seu veículo na garagem à esquerda e crie ou entre em uma sala.
+                </div>
+
+                <!-- Lista de Pilotos no Grid -->
+                <div class="deck-section-title">🏎️ Pilotos no Grid</div>
+                <div id="mp-players-list" class="pilots-roster">
+                  <div class="pilot-slot-waiting">
+                    Crie uma sala ou entre com um código para iniciar o grid.
+                  </div>
                 </div>
               </div>
 
-              <!-- Dicas Rápidas -->
-              <div style="background: rgba(10, 15, 29, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px 10px; font-size: 11px; color: #94a3b8;">
-                <div>🎮 <b>Controles</b>: [W/▲] Acelerar • [S/▼] Freio/Ré • [A/D/◄/►] Direção</div>
-                <div>⚡ <b>Turbo & Vácuo</b>: [SHIFT/N] Nitro • Vácuo colado confere +20% velocidade</div>
+              <!-- Ações da Sala Multiplayer -->
+              <div>
+                <div class="mp-actions-row">
+                  <button id="btn-mp-ready" class="btn-mp-toggle-ready">
+                    ✓ ESTOU PRONTO
+                  </button>
+                  <button id="btn-mp-start" class="btn-mp-start-race" disabled>
+                    🏁 INICIAR CORRIDA
+                  </button>
+                </div>
+                <div style="text-align: center;">
+                  <button class="btn-exit-subtab" id="btn-back-from-mp">← Desconectar e Voltar ao Modo Solo (ESC)</button>
+                </div>
               </div>
             </div>
 
-            <!-- Botão Iniciar -->
-            <button id="btn-start" class="btn-start-race">🏁 LARGADA (ENTER)</button>
-          </div>
-        </div>
+            <!-- ABA 3: APRESENTAÇÃO & MANUAL -->
+            <div id="tab-content-presentation" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
+              <div class="editorial-container">
+                <div class="deck-section-title">📖 Manual de Instruções & Dicas</div>
+                <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">
+                  O <b>Top Gear: Legado</b> recria a emoção das corridas arcade clássicas com física moderna determinística, consumo de combustível e disputa direta entre pilotos.
+                </p>
 
-        <!-- Rodapé do Menu -->
-        <div class="menu-footer-nav">
-          <button class="btn-sub-nav" id="btn-show-presentation">📖 Apresentação & Dicas</button>
-          <button class="btn-sub-nav" id="btn-show-credits">🏆 Créditos</button>
-        </div>
-      </div>
-
-      <!-- PAINEL MULTIPLAYER -->
-      <div id="tab-content-multiplayer" class="menu-card" style="display: none;">
-        <div class="sub-screen-card">
-          <div class="sub-screen-title">🌐 LOBBY MULTIPLAYER</div>
-
-          <!-- Personalização do Piloto (Nome & Veículo) -->
-          <div class="mp-pilot-config-card">
-            <div>
-              <label class="menu-label" for="input-player-name">👤 Nome do Piloto</label>
-              <input type="text" id="input-player-name" class="mp-input" placeholder="Seu nome..." maxlength="16" />
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; color: #94a3b8; margin-bottom: 14px;">
+                  <div style="background: rgba(8, 12, 22, 0.5); padding: 8px 10px; border-radius: 8px;">
+                    <b style="color: #38bdf8;">💨 Efeito Vácuo</b><br/>Fique logo atrás de outro carro para ganhar +20% de velocidade máxima.
+                  </div>
+                  <div style="background: rgba(8, 12, 22, 0.5); padding: 8px 10px; border-radius: 8px;">
+                    <b style="color: #38bdf8;">⚡ Nitro Limitado</b><br/>3 cargas por prova. Use nas saídas de curva e retas longas.
+                  </div>
+                  <div style="background: rgba(8, 12, 22, 0.5); padding: 8px 10px; border-radius: 8px;">
+                    <b style="color: #f59e0b;">⛽ Pit Stop Estratégico</b><br/>Entre na faixa de boxes à esquerda da reta quando o combustível estiver baixo.
+                  </div>
+                  <div style="background: rgba(8, 12, 22, 0.5); padding: 8px 10px; border-radius: 8px;">
+                    <b style="color: #10b981;">🏁 Multiplayer P2P</b><br/>WebRTC direto e de baixíssima latência para disputas em tempo real.
+                  </div>
+                </div>
+              </div>
+              <div style="text-align: center;">
+                <button class="btn-exit-subtab" id="btn-back-from-presentation">← Voltar ao Menu Principal (ESC)</button>
+              </div>
             </div>
-            <div>
-              <div class="menu-label">🏎️ Selecionar Veículo</div>
-              <div class="mp-car-picker">
-                <button class="nav-arrow-btn" id="btn-mp-prev-car" style="width: 28px; height: 28px;">◀</button>
-                <span id="mp-car-badge" class="mp-car-badge" style="color: #e74c3c;">CANNIBAL</span>
-                <button class="nav-arrow-btn" id="btn-mp-next-car" style="width: 28px; height: 28px;">▶</button>
+
+            <!-- ABA 4: CRÉDITOS -->
+            <div id="tab-content-credits" style="display: none; flex-direction: column; justify-content: space-between; height: 100%;">
+              <div class="editorial-container" style="text-align: center; padding: 20px 0;">
+                <div class="deck-section-title" style="justify-content: center;">🏆 Créditos do Projeto</div>
+                <p style="color: #f59e0b; font-size: 15px; font-weight: 800; margin-bottom: 12px;">TOP GEAR: LEGADO</p>
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.8;">
+                  <p><b style="color: #f8fafc;">Desenvolvimento & Física Web Arcade</b><br/>Equipe Top Gear Legado</p>
+                  <p><b style="color: #f8fafc;">Renderização 3D Procedural</b><br/>Three.js + Shaders Retrô</p>
+                  <p><b style="color: #f8fafc;">Multiplayer Low-Latency</b><br/>WebRTC P2P + PeerJS Network Engine</p>
+                </div>
+              </div>
+              <div style="text-align: center;">
+                <button class="btn-exit-subtab" id="btn-back-from-credits">← Voltar ao Menu Principal (ESC)</button>
               </div>
             </div>
           </div>
-
-          <!-- Seção de Criar / Entrar em Sala (visível quando não conectado) -->
-          <div id="mp-section-connect" class="room-controls-row">
-            <button id="btn-create-p2p" class="btn-action-primary btn-action-host" style="flex: 1;">
-              ✨ Criar Sala (Host)
-            </button>
-            <input type="text" id="input-room-code" class="room-input" placeholder="CÓDIGO" maxlength="8" />
-            <button id="btn-join-p2p" class="btn-action-primary" style="flex: 0 0 110px;">
-              🚀 Entrar
-            </button>
-          </div>
-
-          <!-- Card de Sala Ativa com Código e Link de Convite -->
-          <div id="box-invite-url" class="room-active-card" style="display: none;">
-            <div style="flex: 1; overflow: hidden;">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
-                <span class="room-code-tag" id="mp-room-code-label">SALA: -----</span>
-                <span id="mp-status-dot" class="status-dot disconnected"></span>
-                <span id="mp-status-badge" style="font-size: 10px; color: #94a3b8;">Desconectado</span>
-              </div>
-              <div id="mp-url-display" style="font-size: 11px; color: #38bdf8; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                Gerando link...
-              </div>
-            </div>
-            <button id="btn-copy-url" class="btn-action-primary" style="padding: 6px 12px; font-size: 11px;">
-              📋 Copiar Link
-            </button>
-          </div>
-
-          <!-- Status Text Discreto -->
-          <div id="mp-status-text" style="color: #94a3b8; font-size: 11px; margin-bottom: 10px; text-align: center;">
-            Aguardando ação...
-          </div>
-
-          <!-- Lista de Pilotos Conectados -->
-          <div class="menu-label">Pilotos na Sala:</div>
-          <div id="mp-players-list" class="pilots-list-container">
-            <div class="pilot-slot-empty">
-              Crie uma sala ou entre com um código para iniciar.
-            </div>
-          </div>
-
-          <!-- Botões de Ação da Sala -->
-          <div style="display: flex; gap: 10px; margin-top: 14px;">
-            <button id="btn-mp-ready" class="btn-action-primary" style="flex: 1; padding: 12px; font-size: 14px; background: rgba(30, 41, 59, 0.8);">
-              ✓ ESTOU PRONTO
-            </button>
-            <button id="btn-mp-start" class="btn-start-race" style="flex: 1; margin: 0; padding: 12px; font-size: 14px;" disabled>
-              🏁 INICIAR CORRIDA
-            </button>
-          </div>
-
-          <button class="btn-back-menu" id="btn-back-from-mp">← Voltar ao Menu Principal (ESC)</button>
-        </div>
-      </div>
-
-      <!-- PAINEL DE APRESENTAÇÃO -->
-      <div id="tab-content-presentation" class="menu-card" style="display: none;">
-        <div class="sub-screen-card">
-          <div class="sub-screen-title">📖 MANUAL DO PILOTO</div>
-          <p style="color: #38bdf8; font-weight: 600; margin-bottom: 8px;">Bem-vindo ao Top Gear: Legado!</p>
-          <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 14px;">
-            Inspirado no clássico de corrida dos anos 90, o <b>Top Gear: Legado</b> recria a velocidade arcade com física determinística a 60 Hz, consumo de combustível, pit stops estratégicos e colisões intensas entre pilotos.
-          </p>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; color: #cbd5e1;">
-            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
-              <b style="color: #f1c40f;">⚡ Vácuo (Slipstream)</b><br/>
-              Andar colado atrás de outro carro confere até +20% de aceleração.
-            </div>
-            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
-              <b style="color: #f1c40f;">🚀 Cargas de Nitro</b><br/>
-              Você tem 3 cargas de turbo por volta para ultrapassagens fulminantes.
-            </div>
-            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
-              <b style="color: #f1c40f;">💥 Colisões Arcade</b><br/>
-              Bater ou empurrar adversários afeta a trajetória de ambos em pista.
-            </div>
-            <div style="background: rgba(10, 15, 29, 0.5); padding: 10px; border-radius: 8px;">
-              <b style="color: #f1c40f;">⛽ Pit Stop</b><br/>
-              Entre na faixa de boxes à esquerda da reta para reabastecer combustível.
-            </div>
-          </div>
-
-          <button class="btn-back-menu" id="btn-back-from-presentation">← Voltar ao Menu Principal (ESC)</button>
-        </div>
-      </div>
-
-      <!-- PAINEL DE FIM E CRÉDITOS -->
-      <div id="tab-content-credits" class="menu-card" style="display: none;">
-        <div class="sub-screen-card" style="text-align: center;">
-          <div class="sub-screen-title">🏆 CRÉDITOS</div>
-          <p style="color: #f1c40f; font-size: 15px; font-weight: 800; margin-bottom: 12px;">OBRIGADO POR JOGAR!</p>
-          
-          <div style="font-size: 12px; color: #94a3b8; line-height: 1.8;">
-            <p><b style="color: #f8fafc;">Desenvolvimento & Física Web Arcade</b><br/>Equipe Top Gear Legado</p>
-            <p><b style="color: #f8fafc;">Renderização 3D Procedural</b><br/>Three.js + Shaders Retrô</p>
-            <p><b style="color: #f8fafc;">Multiplayer Low-Latency</b><br/>WebRTC P2P + PeerJS Network Engine</p>
-          </div>
-
-          <button class="btn-back-menu" id="btn-back-from-credits">← Voltar ao Menu Principal (ESC)</button>
         </div>
       </div>
     `;
@@ -915,7 +1026,7 @@ export class MenuSystem {
       const badgeEl = this.overlay.querySelector<HTMLSpanElement>('#mp-status-badge');
       const dotEl = this.overlay.querySelector<HTMLSpanElement>('#mp-status-dot');
       if (dotEl) {
-        dotEl.className = `status-dot ${status}`;
+        dotEl.className = `status-led ${status}`;
       }
       if (badgeEl) {
         const labels: Record<string, string> = {
@@ -988,14 +1099,14 @@ export class MenuSystem {
       }
     } else {
       if (inviteBox) inviteBox.style.display = 'none';
-      if (connectSection) connectSection.style.display = 'flex';
+      if (connectSection) connectSection.style.display = 'block';
     }
 
     if (listEl) {
       if (players.length === 0) {
         listEl.innerHTML = `
-          <div class="pilot-slot-empty">
-            ⏳ Aguardando conexão com a sala...
+          <div class="pilot-slot-waiting">
+            ⏳ Conectando aos servidores de sinalização...
           </div>
         `;
       } else {
@@ -1006,25 +1117,25 @@ export class MenuSystem {
             const isReady = p.ready;
 
             return `
-              <div class="pilot-card ${isMe ? 'is-local' : ''}">
-                <div class="pilot-info-left">
-                  <span class="pilot-car-icon">🏎️</span>
+              <div class="pilot-slot-card ${isMe ? 'is-you' : ''}">
+                <div class="pilot-meta-left">
+                  <span style="font-size: 16px;">🏎️</span>
                   <div>
-                    <div class="pilot-name-box">
-                      <span class="pilot-name-text">${escapeHtml(p.name)}</span>
-                      ${isMe ? '<span class="badge-tag badge-you">VOCÊ</span>' : ''}
-                      ${p.isHost ? '<span class="badge-tag badge-host">HOST</span>' : ''}
+                    <div style="display: flex; align-items: center;">
+                      <span class="pilot-name-title">${escapeHtml(p.name)}</span>
+                      ${isMe ? '<span class="badge-micro badge-you">VOCÊ</span>' : ''}
+                      ${p.isHost ? '<span class="badge-micro badge-host">HOST</span>' : ''}
                     </div>
                     <div style="margin-top: 2px;">
-                      <span class="badge-car-name" style="color: ${car.color}; border-color: ${car.color}44;">${car.name.toUpperCase()}</span>
+                      <span class="badge-car-livery" style="color: ${car.color}; border-color: ${car.color}44;">${car.name.toUpperCase()}</span>
                     </div>
                   </div>
                 </div>
                 <div>
                   ${
                     isReady
-                      ? '<span class="pilot-status-badge ready">✓ PRONTO</span>'
-                      : '<span class="pilot-status-badge waiting">⏳ AGUARDANDO</span>'
+                      ? '<span class="pilot-state-badge ready">✓ PRONTO</span>'
+                      : '<span class="pilot-state-badge waiting">⏳ AGUARDANDO</span>'
                   }
                 </div>
               </div>
@@ -1035,8 +1146,8 @@ export class MenuSystem {
         const emptySlot =
           players.length === 1
             ? `
-            <div class="pilot-slot-empty">
-              ⏳ Aguardando 2º piloto entrar pelo link ou código...
+            <div class="pilot-slot-waiting">
+              ⏳ Aguardando 2º piloto ingressar pelo link de convite...
             </div>
           `
             : '';
@@ -1054,12 +1165,10 @@ export class MenuSystem {
       readyBtn.style.display = !this.mpClient.isHost ? 'flex' : 'none';
       if (this.isMpReady) {
         readyBtn.textContent = '✓ PRONTO (CANCELAR)';
-        readyBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-        readyBtn.style.borderColor = '#10b981';
+        readyBtn.classList.add('is-ready');
       } else {
         readyBtn.textContent = '✓ ESTOU PRONTO';
-        readyBtn.style.background = 'rgba(30, 41, 59, 0.8)';
-        readyBtn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        readyBtn.classList.remove('is-ready');
       }
     }
   }
@@ -1081,16 +1190,26 @@ export class MenuSystem {
     const credEl = this.overlay.querySelector<HTMLDivElement>('#tab-content-credits');
     const mpEl = this.overlay.querySelector<HTMLDivElement>('#tab-content-multiplayer');
 
-    if (mainEl) mainEl.style.display = tab === 'main' ? 'block' : 'none';
-    if (presEl) presEl.style.display = tab === 'presentation' ? 'block' : 'none';
-    if (credEl) credEl.style.display = tab === 'credits' ? 'block' : 'none';
-    if (mpEl) mpEl.style.display = tab === 'multiplayer' ? 'block' : 'none';
+    const navMain = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-main');
+    const navMp = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-multiplayer');
+    const navPres = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-presentation');
+    const navCred = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-credits');
 
-    if (tab === 'multiplayer') {
-      const nameInput = this.overlay.querySelector<HTMLInputElement>('#input-player-name');
-      if (nameInput) {
-        nameInput.value = this.playerName;
-      }
+    [navMain, navMp, navPres, navCred].forEach((b) => b?.classList.remove('active'));
+
+    if (mainEl) mainEl.style.display = tab === 'main' ? 'flex' : 'none';
+    if (presEl) presEl.style.display = tab === 'presentation' ? 'flex' : 'none';
+    if (credEl) credEl.style.display = tab === 'credits' ? 'flex' : 'none';
+    if (mpEl) mpEl.style.display = tab === 'multiplayer' ? 'flex' : 'none';
+
+    if (tab === 'main') navMain?.classList.add('active');
+    if (tab === 'multiplayer') navMp?.classList.add('active');
+    if (tab === 'presentation') navPres?.classList.add('active');
+    if (tab === 'credits') navCred?.classList.add('active');
+
+    const nameInput = this.overlay.querySelector<HTMLInputElement>('#input-player-name');
+    if (nameInput) {
+      nameInput.value = this.playerName;
     }
   }
 
@@ -1119,19 +1238,24 @@ export class MenuSystem {
       };
     }
 
-    // Abas de Modo
-    const modeBtns = this.overlay.querySelectorAll<HTMLButtonElement>('#group-mode .tab-btn');
+    // Abas de Navegação Principal
+    const navMain = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-main');
+    const navMp = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-multiplayer');
+    const navPres = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-presentation');
+    const navCred = this.overlay.querySelector<HTMLButtonElement>('#tab-nav-credits');
+
+    if (navMain) navMain.onclick = () => this.setTab('main');
+    if (navMp) navMp.onclick = () => this.setTab('multiplayer');
+    if (navPres) navPres.onclick = () => this.setTab('presentation');
+    if (navCred) navCred.onclick = () => this.setTab('credits');
+
+    // Modos Solo (Corrida / Treino Livre)
+    const modeBtns = this.overlay.querySelectorAll<HTMLButtonElement>('#group-mode .sub-tab-btn');
     modeBtns.forEach((btn) => {
       btn.onclick = () => {
-        const mode = btn.getAttribute('data-mode');
-        if (mode === 'multiplayer') {
-          this.setTab('multiplayer');
-          return;
-        }
-
         modeBtns.forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        this.selectedMode = mode as RaceMode;
+        this.selectedMode = btn.getAttribute('data-mode') as RaceMode;
 
         const diffRow = this.overlay.querySelector<HTMLDivElement>('#row-difficulty');
         if (diffRow) {
@@ -1161,7 +1285,7 @@ export class MenuSystem {
     }
 
     // Abas de Dificuldade
-    const diffBtns = this.overlay.querySelectorAll<HTMLButtonElement>('#group-diff .tab-btn');
+    const diffBtns = this.overlay.querySelectorAll<HTMLButtonElement>('#group-diff .sub-tab-btn');
     diffBtns.forEach((btn) => {
       btn.onclick = () => {
         diffBtns.forEach((b) => b.classList.remove('active'));
@@ -1171,7 +1295,7 @@ export class MenuSystem {
       };
     });
 
-    // Navegação de Carros (Menu Principal)
+    // Navegação de Carros (Universal)
     const prevBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-prev-car');
     const nextBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-next-car');
 
@@ -1179,31 +1303,12 @@ export class MenuSystem {
       prevBtn.onclick = () => {
         this.selectedCarIndex = (this.selectedCarIndex - 1 + ALL_CARS.length) % ALL_CARS.length;
         this.updateCarDisplay();
+        this.syncMultiplayerCarAndName();
         soundSystem.playBeep(620);
       };
     }
     if (nextBtn) {
       nextBtn.onclick = () => {
-        this.selectedCarIndex = (this.selectedCarIndex + 1) % ALL_CARS.length;
-        this.updateCarDisplay();
-        soundSystem.playBeep(620);
-      };
-    }
-
-    // Navegação de Carros (Lobby Multiplayer)
-    const mpPrevCarBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-prev-car');
-    const mpNextCarBtn = this.overlay.querySelector<HTMLButtonElement>('#btn-mp-next-car');
-
-    if (mpPrevCarBtn) {
-      mpPrevCarBtn.onclick = () => {
-        this.selectedCarIndex = (this.selectedCarIndex - 1 + ALL_CARS.length) % ALL_CARS.length;
-        this.updateCarDisplay();
-        this.syncMultiplayerCarAndName();
-        soundSystem.playBeep(620);
-      };
-    }
-    if (mpNextCarBtn) {
-      mpNextCarBtn.onclick = () => {
         this.selectedCarIndex = (this.selectedCarIndex + 1) % ALL_CARS.length;
         this.updateCarDisplay();
         this.syncMultiplayerCarAndName();
@@ -1275,15 +1380,11 @@ export class MenuSystem {
       };
     }
 
-    // Navegação para Apresentação, Créditos e Voltar
-    const btnPres = this.overlay.querySelector<HTMLButtonElement>('#btn-show-presentation');
-    const btnCred = this.overlay.querySelector<HTMLButtonElement>('#btn-show-credits');
+    // Botões de Voltar
     const btnBackPres = this.overlay.querySelector<HTMLButtonElement>('#btn-back-from-presentation');
     const btnBackCred = this.overlay.querySelector<HTMLButtonElement>('#btn-back-from-credits');
     const btnBackMp = this.overlay.querySelector<HTMLButtonElement>('#btn-back-from-mp');
 
-    if (btnPres) btnPres.onclick = () => this.setTab('presentation');
-    if (btnCred) btnCred.onclick = () => this.setTab('credits');
     if (btnBackPres) btnBackPres.onclick = () => this.setTab('main');
     if (btnBackCred) btnBackCred.onclick = () => this.setTab('main');
     if (btnBackMp) {
@@ -1339,7 +1440,6 @@ export class MenuSystem {
   private updateCarDisplay(): void {
     const car: CarStats = ALL_CARS[this.selectedCarIndex];
     const badge = this.overlay.querySelector<HTMLDivElement>('#menu-car-badge');
-    const mpBadge = this.overlay.querySelector<HTMLSpanElement>('#mp-car-badge');
     const desc = this.overlay.querySelector<HTMLDivElement>('#menu-car-desc');
     const statSpeed = this.overlay.querySelector<HTMLDivElement>('#stat-speed');
     const statAccel = this.overlay.querySelector<HTMLDivElement>('#stat-accel');
@@ -1357,10 +1457,6 @@ export class MenuSystem {
     if (badge) {
       badge.textContent = car.name.toUpperCase();
       badge.style.color = car.color;
-    }
-    if (mpBadge) {
-      mpBadge.textContent = car.name.toUpperCase();
-      mpBadge.style.color = car.color;
     }
     if (desc) {
       desc.textContent = carDescriptions[car.id] || 'Veículo esportivo';
